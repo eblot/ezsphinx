@@ -25,47 +25,48 @@ from configobj import ConfigObj
 from validate import Validator
 
 # ETS imports
-from enthought.etsconfig.api import ETSConfig
-from enthought.pyface.api import AboutDialog, DirectoryDialog, FileDialog, \
-    ImageResource, OK
-from enthought.pyface.action.api import Group as ActionGroup
-from enthought.traits.api import HasTraits, Str, Property, Bool, List, \
-    Instance, Dict, Int, Any, Event, Enum, on_trait_change
-from enthought.traits.ui.api import View, Group, Item, \
-    TabularEditor, ListEditor, TextEditor, CodeEditor, InstanceEditor
-from enthought.traits.ui.extras.saving import SaveHandler
-from enthought.traits.ui.key_bindings import KeyBinding, KeyBindings
-from enthought.traits.ui.menu import Action, Menu, MenuBar
-from enthought.traits.ui.tabular_adapter import TabularAdapter
+# from enthought.etsconfig.api import ETSConfig
+# from enthought.pyface.api import AboutDialog, DirectoryDialog, FileDialog, \
+#     ImageResource, OK
+# from enthought.pyface.action.api import Group as ActionGroup
+# from enthought.traits.api import HasTraits, Str, Property, Bool, List, \
+#     Instance, Dict, Int, Any, Event, Enum, on_trait_change
+# from enthought.traits.ui.api import View, Group, Item, \
+#     TabularEditor, ListEditor, TextEditor, CodeEditor, InstanceEditor
+# from enthought.traits.ui.extras.saving import SaveHandler
+# from enthought.traits.ui.key_bindings import KeyBinding, KeyBindings
+# from enthought.traits.ui.menu import Action, Menu, MenuBar
+# from enthought.traits.ui.tabular_adapter import TabularAdapter
 
 # Local imports
 from rest_editor_model import ReSTHTMLPair
-from file_tree import FileTree
+# from file_tree import FileTree
 
 # Platform and toolkit dependent imports
-import platform
-if platform.system() == 'Windows' and ETSConfig.toolkit == 'wx':
-    from enthought.traits.ui.wx.extra.windows.ie_html_editor import \
-        IEHTMLEditor as HTMLEditor
-else:
-    from enthought.traits.ui.api import HTMLEditor
+#import platform
+#if platform.system() == 'Windows' and ETSConfig.toolkit == 'wx':
+#    from enthought.traits.ui.wx.extra.windows.ie_html_editor import \
+#        IEHTMLEditor as HTMLEditor
+#else:
+#    from enthought.traits.ui.api import HTMLEditor
 
-if ETSConfig.toolkit == 'qt4':
-    # Qsci is not actually included in PyQt4, despite what its root package name
-    # might suggest, so we check see if it is available
-    try:
-        from PyQt4 import Qsci
-    except ImportError:
-        Qsci = None
+# if ETSConfig.toolkit == 'qt4':
+#     # Qsci is not actually included in PyQt4, despite what its root package name
+#     # might suggest, so we check see if it is available
+#     try:
+#         from PyQt4 import Qsci
+#     except ImportError:
+#         Qsci = None
 
 
-class DocUtilsWarningAdapter(TabularAdapter):
+# class DocUtilsWarningAdapter(TabularAdapter):
+class DocUtilsWarningAdapter(object):
     columns = [('Line', 'line'), ('Description', 'description')]
-    image = Property
+    image = None # Property
 
-    icon_mapping = Dict({ 1:ImageResource('info'),
-                          2:ImageResource('warning'),
-                          3:ImageResource('error') })
+    icon_mapping = { 1: 'info',
+                     2: 'warning',
+                     3: 'error' }
 
     def _get_image(self):
         if self.item is None or self.column != 1:
@@ -74,7 +75,8 @@ class DocUtilsWarningAdapter(TabularAdapter):
             return self.icon_mapping.get(self.item.level)
 
 
-class ReSTHTMLPairHandler(SaveHandler):
+# class ReSTHTMLPairHandler(SaveHandler):
+class ReSTHTMLPairHandler(object):
 
     # SaveHandler traits
     wildcard = 'ReST files (*.txt;*.rst)|*.txt;*.rst'
@@ -83,7 +85,7 @@ class ReSTHTMLPairHandler(SaveHandler):
     autosave = True
 
     # A reference to the toolkit control that is being used to edit the ReST
-    rest_control = Any
+    rest_control = None
 
     def init(self, info):
         super(ReSTHTMLPairHandler, self).init(info)
@@ -103,26 +105,27 @@ class ReSTHTMLPairHandler(SaveHandler):
         getattr(self.rest_control, action)()
 
 
-class ReSTHTMLPairView(HasTraits):
+# class ReSTHTMLPairView(HasTraits):
+class ReSTHTMLPairView(object):
 
-    model = Instance(ReSTHTMLPair)
+    model = ReSTHTMLPair()
 
     # ReST editor related traits
-    title = Property(Str, depends_on='model.filepath, model.dirty')
-    selected_line = Int
-    _editor_action = Event
-    _editor_action_type = Enum('undo', 'redo', 'cut', 'copy', 'paste',
-                               'selectAll')
+    title = '' # Property(Str, depends_on='model.filepath, model.dirty')
+    selected_line = 0 # Int
+    _editor_action = None # Event
+    _editor_action_type = None # Enum('undo', 'redo', 'cut', 'copy', 'paste',
+                            #        'selectAll')
 
     # HTML view related traits
-    html = Property(Str, depends_on='model.html')
-    base_url = Property(Str, depends_on='model.filepath')
+    html = '' # Property(Str, depends_on='model.html')
+    base_url = '' # Property(Str, depends_on='model.filepath')
 
     # Warning related traits
-    dclicked_warning = Event
-    show_warning_lines = Bool(True)
-    warning_lines = Property(List(Int),
-                             depends_on='model.warnings, show_warning_lines')
+    dclicked_warning = None # Event
+    show_warning_lines = True
+    warning_lines = [] # Property(List(Int),
+                        #         depends_on='model.warnings, show_warning_lines')
 
     def source_editor_action(self, action):
         self._editor_action_type = action
@@ -194,7 +197,8 @@ class ReSTHTMLPairView(HasTraits):
             return []
 
 
-class ReSTHTMLEditorHandler(SaveHandler):
+# class ReSTHTMLEditorHandler(SaveHandler):
+class ReSTHTMLEditorHandler(object):
 
     # SaveHandler traits
     wildcard = 'ReST files (*.txt;*.rst)|*.txt;*.rst'
@@ -202,7 +206,7 @@ class ReSTHTMLEditorHandler(SaveHandler):
     allowValidationBypass = True
 
     # ReSTHTMLEditorHandler traits
-    qt_splitter_state = List
+    qt_splitter_state = [] # List
 
     #-----------------------------------------------------------------
     #  Handler interface
@@ -340,27 +344,29 @@ class ReSTHTMLEditorHandler(SaveHandler):
         AboutDialog(additions=[text]).open()
 
 
-class ReSTHTMLEditorView(HasTraits):
+# class ReSTHTMLEditorView(HasTraits):
+class ReSTHTMLEditorView(object):
     
-    root_path = Str(USER_HOME_DIRECTORY)
-    filters = List(['*.rst', '*.txt'])
+    root_path = USER_HOME_DIRECTORY # Str(USER_HOME_DIRECTORY)
+    filters = ['*.rst', '*.txt']
 
-    selected_file = Str
+    selected_file = '' # Str
 
-    open_views = List(ReSTHTMLPairView)
-    selected_view = Instance(ReSTHTMLPairView)
+    open_views = [] # List(ReSTHTMLPairView)
+    selected_view = None # Instance(ReSTHTMLPairView)
 
-    config = Any
-    use_sphinx = Bool(False)
-    sphinx_static_path = Str
+    config = None # Any
+    use_sphinx = False
+    sphinx_static_path = '' # Str
 
-    _tree = Instance(FileTree)
+    _tree = None # Instance(FileTree)
 
     def __init__(self, **kw):
         super(ReSTHTMLEditorView, self).__init__(**kw)
         spec = ConfigObj()
         spec['use_sphinx'] = 'boolean(default=False)'
-        path = os.path.join(ETSConfig.application_data, 'rest_editor.conf')
+        # path = os.path.join(ETSConfig.application_data, 'rest_editor.conf')
+        path = 'rest_editor.conf'
         self.config = ConfigObj(path, configspec=spec, create_empty=True)
         self.config.validate(Validator(), copy=True)
         self.use_sphinx = self.config['use_sphinx']
@@ -487,7 +493,7 @@ class ReSTHTMLEditorView(HasTraits):
     def __tree_default(self):
         return FileTree(root_path=self.root_path, filters=self.filters)
         
-    @on_trait_change('_tree.selected')
+    # @on_trait_change('_tree.selected')
     def _tree_selection_changed(self):
         self.selected_file = self._tree.selected
 

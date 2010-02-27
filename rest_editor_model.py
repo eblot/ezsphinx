@@ -20,9 +20,9 @@ import codecs
 from multiprocessing import Pool
 
 # ETS imports
-from enthought.traits.api import HasTraits, Int, Str, List, Bool, Any, \
-    Property, on_trait_change
-from enthought.traits.ui.extras.saving import CanSaveMixin
+# from enthought.traits.api import HasTraits, Int, Str, List, Bool, Any, \
+#    Property, on_trait_change
+# from enthought.traits.ui.extras.saving import CanSaveMixin
 
 # Local imports. Because of an apparent bug in multiprocessing where functions
 # cannot be defined outside the module where apply_async is called, we define
@@ -34,29 +34,31 @@ def sphinx_rest_to_html(rest, static_path=util.DEFAULT_STATIC_PATH):
     return util.sphinx_rest_to_html(rest, static_path)
 
 
-class DocUtilsWarning(HasTraits):
+# class DocUtilsWarning(HasTraits):
+class DocUtilsWarning(object):
 
-    level = Int
-    line = Int
-    description = Str
+    level = int
+    line = int
+    description = str
 
 
-class ReSTHTMLPair(CanSaveMixin):
-    rest = Str
-    html = Str
-    warnings = List(DocUtilsWarning)
+# class ReSTHTMLPair(CanSaveMixin):
+class ReSTHTMLPair(object):
+    rest = '' # str
+    html = '' # str
+    warnings = [] # DocUtilsWarning
 
-    use_sphinx = Bool(False)
-    sphinx_static_path = Str
+    use_sphinx = False
+    sphinx_static_path = ''
 
-    save_html = Bool(False)
+    save_html = False
     # The 'filepath' attribute of CanSaveMixin is for the ReST file
-    html_filepath = Property(Str, depends_on='filepath')
+    html_filepath = '' # Property(str, depends_on='filepath')
 
     # Private traits
-    _pool = Any
-    _processing = Bool(False)
-    _queued = Bool(False)
+    _pool = None
+    _processing = False
+    _queued = False
 
     #-----------------------------------------------------------------
     #  ReSTHTMLPair interface
@@ -72,7 +74,7 @@ class ReSTHTMLPair(CanSaveMixin):
     def _rest_changed(self):
         self.dirty = True
 
-    @on_trait_change('rest, use_sphinx, sphinx_static_path')
+    # @on_trait_change('rest, use_sphinx, sphinx_static_path')
     def _queue_html(self):
         if self._processing:
             self._queued = True

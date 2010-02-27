@@ -39,7 +39,7 @@ def main():
                 path += '.rst'
             app.new(path)
 
-    app.configure_traits()
+    # app.configure_traits()
 
 
 if __name__ == '__main__':
