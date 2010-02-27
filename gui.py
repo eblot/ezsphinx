@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'ui.ui'
+# Form implementation generated from reading ui file 'gui.ui'
 #
-# Created: Sat Feb 27 15:26:25 2010
+# Created: Sat Feb 27 23:58:35 2010
 #      by: PyQt4 UI code generator 4.7
 #
 # WARNING! All changes made in this file will be lost!
@@ -20,13 +20,17 @@ class Ui_MainWindow(object):
         self.verticalLayout.setObjectName("verticalLayout")
         self.twsplitter = QtGui.QSplitter(self.mainwidget)
         self.twsplitter.setOrientation(QtCore.Qt.Horizontal)
-        self.twsplitter.setHandleWidth(3)
+        self.twsplitter.setHandleWidth(7)
         self.twsplitter.setObjectName("twsplitter")
         self.horizontalLayoutWidget = QtGui.QWidget(self.twsplitter)
         self.horizontalLayoutWidget.setObjectName("horizontalLayoutWidget")
         self.textlayout = QtGui.QHBoxLayout(self.horizontalLayoutWidget)
         self.textlayout.setObjectName("textlayout")
         self.textedit = QtGui.QPlainTextEdit(self.horizontalLayoutWidget)
+        font = QtGui.QFont()
+        font.setFamily("Luxi Mono")
+        font.setPointSize(10)
+        self.textedit.setFont(font)
         self.textedit.setObjectName("textedit")
         self.textlayout.addWidget(self.textedit)
         self.horizontalLayoutWidget_2 = QtGui.QWidget(self.twsplitter)

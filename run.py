@@ -2,10 +2,13 @@
 # -*- coding: utf-8 -*-
 import sys
 from PyQt4 import QtGui
-from view import ESphinxGui
+from view import ESphinxView
+from model import ESphinxModel
     
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
-    gui = ESphinxGui()
-    gui.show()
+    model = ESphinxModel()
+    view = ESphinxView()
+    model.add_view(view)
+    view.show()
     sys.exit(app.exec_())

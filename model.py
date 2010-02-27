@@ -37,39 +37,42 @@ def sphinx_rest_to_html(rest, static_path=util.DEFAULT_STATIC_PATH):
 # class DocUtilsWarning(HasTraits):
 class DocUtilsWarning(object):
 
-    level = int
-    line = int
-    description = str
+    def __init__(self, level=0, line=0, description=''):
+        self.level = level
+        self.line = line
+        self.description = description
 
 
-# class ReSTHTMLPair(CanSaveMixin):
-class ReSTHTMLPair(object):
-    rest = '' # str
-    html = '' # str
-    warnings = [] # DocUtilsWarning
-
-    use_sphinx = False
-    sphinx_static_path = ''
-
-    save_html = False
-    # The 'filepath' attribute of CanSaveMixin is for the ReST file
-    html_filepath = '' # Property(str, depends_on='filepath')
-
-    # Private traits
-    _pool = None
-    _processing = False
-    _queued = False
-
-    #-----------------------------------------------------------------
-    #  ReSTHTMLPair interface
-    #-----------------------------------------------------------------
-
+class ESphinxModel(object):
     def __init__(self, **kw):
+        self._rest = '' # str
+        self._html = '' # str
+        self._warnings = [] # DocUtilsWarning
+        self.use_sphinx = False
+        self.sphinx_static_path = ''
+        self.save_html = False
+        self.html_filepath = '' # Property(str, depends_on='filepath')
+        self._pool = None
+        self._processing = False
+        self._queued = False
         self._pool = Pool(processes=1)
-        # super(ReSTHTMLPair, self).__init__(**kw)
-        if self.html == '' and not self._processing:
-            self._processing = True
-            self._gen_html()
+        self._views = []
+        #if self._html == '' and not self._processing:
+        #    self._processing = True
+        #    self._gen_html()
+
+    def add_view(self, view):
+        if view not in self._views:
+            self._views.append(view)
+            view.connect(self)
+    
+    def update_rest(self, rest):
+        self._rest = rest
+        self._queue_html()
+    
+    def get_html(self):
+        return self._html
+        #return '\n'.join(self._html.split('\n')[1:])
 
     def _rest_changed(self):
         self.dirty = True
@@ -83,7 +86,7 @@ class ReSTHTMLPair(object):
             self._gen_html()
             
     def _gen_html(self):
-        args = [ self.rest ]
+        args = [ self._rest ]
         if self.use_sphinx:
             func = sphinx_rest_to_html
             if self.sphinx_static_path:
@@ -99,18 +102,21 @@ class ReSTHTMLPair(object):
             self._queued = False
         else:
             self._processing = False
-            self.html, warning_nodes = result
+            self._html, warning_nodes = result
             warnings = []
             for node in warning_nodes:
                 try:
-                    description = node.children[0].children[0].data
+                    description = node.children[0].children[0] #.data
                 except AttributeError, e:
                     print e
                     continue
+                print "Warning: %s" % description
                 warnings.append(DocUtilsWarning(level=node.attributes['level'],
                                                 line=node.attributes['line'],
                                                 description=description))
-            self.warnings = warnings
+            self._warnings = warnings
+            for view in self._views:
+                view.refresh()
 
     def _get_html_filepath(self):
         filepath = self.filepath
@@ -126,7 +132,7 @@ class ReSTHTMLPair(object):
     def validate(self):
         """ Prompt the user if there are warnings/errors with reST file.
         """
-        if len(self.warnings):
+        if len(self._warnings):
             return (False, "The reStructured Text is improperly composed." \
                            "Are you sure you want to save it?")
         else:

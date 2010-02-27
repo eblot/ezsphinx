@@ -29,7 +29,14 @@
       <widget class="QWidget" name="horizontalLayoutWidget">
        <layout class="QHBoxLayout" name="textlayout">
         <item>
-         <widget class="QPlainTextEdit" name="textedit"/>
+         <widget class="QPlainTextEdit" name="textedit">
+          <property name="font">
+           <font>
+            <family>Luxi Mono</family>
+            <pointsize>10</pointsize>
+           </font>
+          </property>
+         </widget>
         </item>
        </layout>
       </widget>
