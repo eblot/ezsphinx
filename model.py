@@ -66,7 +66,7 @@ class ReSTHTMLPair(object):
 
     def __init__(self, **kw):
         self._pool = Pool(processes=1)
-        super(ReSTHTMLPair, self).__init__(**kw)
+        # super(ReSTHTMLPair, self).__init__(**kw)
         if self.html == '' and not self._processing:
             self._processing = True
             self._gen_html()
@@ -104,7 +104,8 @@ class ReSTHTMLPair(object):
             for node in warning_nodes:
                 try:
                     description = node.children[0].children[0].data
-                except AttributeError:
+                except AttributeError, e:
+                    print e
                     continue
                 warnings.append(DocUtilsWarning(level=node.attributes['level'],
                                                 line=node.attributes['line'],
