@@ -51,22 +51,16 @@ def docutils_rest_to_html(rest):
             if value.__module__.startswith('sphinx'):
                 docutils_roles.pop(key)
 
-    print "REST %s" % rest
     pub = Publisher(source_class=docutils.io.StringInput,
                     destination_class=docutils.io.StringOutput)
     pub.set_reader('standalone', None, 'restructuredtext')
     pub.set_writer('html')
     pub.get_settings() # Get the default settings
     pub.settings.halt_level = 6 # Don't halt on errors
-    # pub.settings.warning_stream = StringIO()
-
     pub.set_source(source=str(rest))
     pub.set_destination()
-    print "Start doc [%s]" % rest
     pub.document = pub.reader.read(pub.source, pub.parser, pub.settings)
-    print "End doc"
     pub.apply_transforms()
-
     # Walk the node structure of a docutils document and remove 'problematic'
     # and 'system_message' nodes. Save the system_message nodes.
     warning_nodes = []

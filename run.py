@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import sys
 from PyQt4 import QtGui
-from view import ESphinxView
+from view import ESphinxView, WarningReportView
 from model import ESphinxModel
     
 if __name__ == "__main__":

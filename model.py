@@ -1,4 +1,4 @@
-#------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
 #
 #  Copyright (c) 2009, Enthought, Inc.
 #  All rights reserved.
@@ -13,7 +13,7 @@
 #  Author: Evan Patterson
 #  Date:   06/18/2009
 #
-#------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
 
 # Standard library imports
 import codecs
@@ -33,6 +33,8 @@ def docutils_rest_to_html(rest):
 def sphinx_rest_to_html(rest, static_path=util.DEFAULT_STATIC_PATH):
     return util.sphinx_rest_to_html(rest, static_path)
 
+from PyQt4 import QtCore, QtGui, QtWebKit
+
 
 # class DocUtilsWarning(HasTraits):
 class DocUtilsWarning(object):
@@ -43,7 +45,50 @@ class DocUtilsWarning(object):
         self.description = description
 
 
+class WarningReportModel(QtCore.QAbstractTableModel):
+    """
+    """
+    columns = ('Level', 'Description')
+    levels = ('None','Debug','Info','Warning','Error','Critical')
+    
+    def __init__(self, parent=None): 
+        QtCore.QAbstractTableModel.__init__(self, parent)
+        self._warnings = []
+    
+    def rowCount(self, parent=None):
+        return len(self._warnings)
+    
+    def columnCount(self, parent=None):
+        return len(self.columns)
+    
+    def data(self, index, role):
+        if not index.isValid():
+            return QtCore.QVariant()
+        if role != QtCore.Qt.DisplayRole:
+            return QtCore.QVariant() 
+        return QtCore.QVariant(self._warnings[index.row()][index.column()+1])
+    
+    def headerData(self, section, orientation, role):
+        if role != QtCore.Qt.DisplayRole:
+            return QtCore.QVariant()
+        if orientation != QtCore.Qt.Horizontal:
+            return QtCore.QVariant(self._warnings[section][0])
+        return QtCore.QVariant(self.columns[section])
+        
+    def reset(self):
+        QtCore.QAbstractTableModel.reset(self)
+        self._warnings = []
+    
+    def add(self, level=0, line=0, desc=''):
+        print "Warning: %d:%d %s" % (level, line, desc)
+        self._warnings.append((line, self.levels[level], desc))
+        self.insertRows(0, 1)
+
+
 class ESphinxModel(object):
+    """
+    """
+    
     def __init__(self, **kw):
         self._rest = '' # str
         self._html = '' # str
@@ -57,6 +102,7 @@ class ESphinxModel(object):
         self._queued = False
         self._pool = Pool(processes=1)
         self._views = []
+        self._warnreport = WarningReportModel()
         #if self._html == '' and not self._processing:
         #    self._processing = True
         #    self._gen_html()
@@ -64,7 +110,7 @@ class ESphinxModel(object):
     def add_view(self, view):
         if view not in self._views:
             self._views.append(view)
-            view.connect(self)
+            view.set_model(self)
     
     def update_rest(self, rest):
         self._rest = rest
@@ -73,6 +119,9 @@ class ESphinxModel(object):
     def get_html(self):
         return self._html
         #return '\n'.join(self._html.split('\n')[1:])
+    
+    def get_warnreport(self):
+        return self._warnreport
 
     def _rest_changed(self):
         self.dirty = True
@@ -93,7 +142,6 @@ class ESphinxModel(object):
                 args.append(self.sphinx_static_path)
         else:
             func = docutils_rest_to_html
-        #self._set_html(func(*args))
         self._pool.apply_async(func, args, callback=self._set_html)
 
     def _set_html(self, result):
@@ -103,18 +151,16 @@ class ESphinxModel(object):
         else:
             self._processing = False
             self._html, warning_nodes = result
-            warnings = []
+            self._warnreport.reset()
             for node in warning_nodes:
                 try:
                     description = node.children[0].children[0] #.data
                 except AttributeError, e:
                     print e
                     continue
-                print "Warning: %s" % description
-                warnings.append(DocUtilsWarning(level=node.attributes['level'],
-                                                line=node.attributes['line'],
-                                                description=description))
-            self._warnings = warnings
+                self._warnreport.add(node.attributes['level'],
+                                     node.attributes['line'],
+                                     description)
             for view in self._views:
                 view.refresh()
 
@@ -151,3 +197,4 @@ class ESphinxModel(object):
             fh = codecs.open(self.html_filepath, 'w', 'utf-8')
             fh.write(self.html)
             fh.close()
+

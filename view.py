@@ -8,7 +8,7 @@ import threading
 # from os.path import isfile
 
 class ESphinxView(QtGui.QMainWindow):
-    
+
     def __init__(self, parent=None):
         QtGui.QWidget.__init__(self, parent)
         self._model = None
@@ -36,11 +36,14 @@ class ESphinxView(QtGui.QMainWindow):
         self._ui.hlayout.setContentsMargins(4,4,4,0)
         self._ui.vlayout.setContentsMargins(4,0,4,0)
         self._ui.textlayout.setContentsMargins(0,0,2,0)
-        self._ui.weblayout.setContentsMargins(0,0,2,0)
+        self._ui.weblayout.setContentsMargins(2,0,2,2)
         self._ui.tablelayout.setContentsMargins(4,0,4,0)
-    
-    def connect(self, model):
+        self._warnreportview = WarningReportView()
+        self._ui.tablelayout.addWidget(self._warnreportview)
+
+    def set_model(self, model):
         self._model = model
+        self._warnreportview.setModel(model.get_warnreport())
 
     def _textedit_update(self):
         if self._model:
@@ -51,6 +54,7 @@ class ESphinxView(QtGui.QMainWindow):
         doc = self._docs.pop(0)
         self._lock.release()
         self._ui.webview.setHtml(doc)
+        self._warnreportview.refresh()
 
     def refresh(self):
         # called from a worker thread, need to dispath the event with the
@@ -59,3 +63,23 @@ class ESphinxView(QtGui.QMainWindow):
         self._docs.append(self._model.get_html())
         self._lock.release()
         self.emit(QtCore.SIGNAL('_reload()'))
+
+
+class WarningReportView(QtGui.QTableView):
+    """
+    """
+
+    def __init__(self, *args): 
+        QtGui.QTableView.__init__(self, *args) 
+        font = QtGui.QFont()
+        font.setPointSize(10)
+        self.setFont(font)
+        font = QtGui.QFont()
+        font.setWeight(QtGui.QFont.Bold)
+        self.setAlternatingRowColors(True)
+        header = self.horizontalHeader()
+        header.setFont(font) 
+        header.setStretchLastSection(True)
+
+    def refresh(self):
+        self.resizeRowsToContents()

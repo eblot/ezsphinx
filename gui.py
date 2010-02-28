@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'gui.ui'
 #
-# Created: Sun Feb 28 01:28:38 2010
+# Created: Sun Feb 28 13:46:24 2010
 #      by: PyQt4 UI code generator 4.7
 #
 # WARNING! All changes made in this file will be lost!
@@ -50,9 +50,6 @@ class Ui_MainWindow(object):
         self.tablewidget.setObjectName("tablewidget")
         self.tablelayout = QtGui.QHBoxLayout(self.tablewidget)
         self.tablelayout.setObjectName("tablelayout")
-        self.tableview = QtGui.QTableView(self.tablewidget)
-        self.tableview.setObjectName("tableview")
-        self.tablelayout.addWidget(self.tableview)
         self.vlayout.addWidget(self.vsplitter)
         MainWindow.setCentralWidget(self.mainwidget)
         self.menubar = QtGui.QMenuBar(MainWindow)

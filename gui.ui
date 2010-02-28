@@ -64,10 +64,6 @@
       </widget>
       <widget class="QWidget" name="tablewidget">
        <layout class="QHBoxLayout" name="tablelayout">
-        <item>
-         <widget class="QTableView" name="tableview">
-         </widget>
-        </item>
        </layout>
       </widget>
      </widget>
