@@ -17,38 +17,55 @@
    <property name="mouseTracking">
     <bool>true</bool>
    </property>
-   <layout class="QVBoxLayout" name="verticalLayout">
+
+   <layout class="QVBoxLayout" name="vlayout">
     <item>
-     <widget class="QSplitter" name="twsplitter">
+     <widget class="QSplitter" name="vsplitter">
       <property name="orientation">
-       <enum>Qt::Horizontal</enum>
+       <enum>Qt::Vertical</enum>
       </property>
       <property name="handleWidth">
        <number>7</number>
       </property>
-      <widget class="QWidget" name="horizontalLayoutWidget">
-       <layout class="QHBoxLayout" name="textlayout">
+      <widget class="QWidget" name="editwidget">
+       <layout class="QVBoxLayout" name="hlayout">
         <item>
-         <widget class="QPlainTextEdit" name="textedit">
-          <property name="font">
-           <font>
-            <family>Luxi Mono</family>
-            <pointsize>10</pointsize>
-           </font>
+         <widget class="QSplitter" name="hsplitter">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
           </property>
+          <property name="handleWidth">
+           <number>7</number>
+          </property>
+          <widget class="QWidget" name="textwidget">
+           <layout class="QHBoxLayout" name="textlayout">
+            <item>
+             <widget class="QPlainTextEdit" name="textedit">
+             </widget>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="webwidget">
+           <layout class="QHBoxLayout" name="weblayout">
+            <item>
+             <widget class="QWebView" name="webview">
+              <property name="url">
+               <url>
+                <string>about:blank</string>
+               </url>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
          </widget>
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="horizontalLayoutWidget_2">
-       <layout class="QHBoxLayout" name="weblayout">
+      <widget class="QWidget" name="tablewidget">
+       <layout class="QHBoxLayout" name="tablelayout">
         <item>
-         <widget class="QWebView" name="webview">
-          <property name="url">
-           <url>
-            <string>about:blank</string>
-           </url>
-          </property>
+         <widget class="QTableView" name="tableview">
          </widget>
         </item>
        </layout>

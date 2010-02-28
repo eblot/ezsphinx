@@ -1,6 +1,6 @@
 # import sys
 from PyQt4 import QtCore, QtGui, QtWebKit
-from ui import Ui_MainWindow
+from gui import Ui_MainWindow
 import os
 import tempfile
 import threading
@@ -30,8 +30,14 @@ class ESphinxView(QtGui.QMainWindow):
         self._docs = []
         font = QtGui.QFont()
         font.setFamily("Monaco")
-        font.setPointSize(10)
+        font.setPointSize(11)
         self._ui.textedit.setFont(font)
+        self._ui.webview.setTextSizeMultiplier(0.8)
+        self._ui.hlayout.setContentsMargins(4,4,4,0)
+        self._ui.vlayout.setContentsMargins(4,0,4,0)
+        self._ui.textlayout.setContentsMargins(0,0,2,0)
+        self._ui.weblayout.setContentsMargins(0,0,2,0)
+        self._ui.tablelayout.setContentsMargins(4,0,4,0)
     
     def connect(self, model):
         self._model = model
