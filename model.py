@@ -36,20 +36,11 @@ def sphinx_rest_to_html(rest, static_path=util.DEFAULT_STATIC_PATH):
 from PyQt4 import QtCore, QtGui, QtWebKit
 
 
-# class DocUtilsWarning(HasTraits):
-class DocUtilsWarning(object):
-
-    def __init__(self, level=0, line=0, description=''):
-        self.level = level
-        self.line = line
-        self.description = description
-
-
 class WarningReportModel(QtCore.QAbstractTableModel):
     """
     """
-    columns = ('Level', 'Description')
-    levels = ('None','Debug','Info','Warning','Error','Critical')
+    columns = ('Line', 'Level', 'Description')
+    levels = ('Debug','Info','Warning','Error','Severe','Critical')
     
     def __init__(self, parent=None): 
         QtCore.QAbstractTableModel.__init__(self, parent)
@@ -66,13 +57,13 @@ class WarningReportModel(QtCore.QAbstractTableModel):
             return QtCore.QVariant()
         if role != QtCore.Qt.DisplayRole:
             return QtCore.QVariant() 
-        return QtCore.QVariant(self._warnings[index.row()][index.column()+1])
+        return QtCore.QVariant(self._warnings[index.row()][index.column()])
     
     def headerData(self, section, orientation, role):
         if role != QtCore.Qt.DisplayRole:
             return QtCore.QVariant()
         if orientation != QtCore.Qt.Horizontal:
-            return QtCore.QVariant(self._warnings[section][0])
+            return QtCore.QVariant(int(section)+1)
         return QtCore.QVariant(self.columns[section])
         
     def reset(self):
@@ -96,13 +87,13 @@ class ESphinxModel(object):
     """
     
     def __init__(self, **kw):
-        self._rest = '' # str
-        self._html = '' # str
-        self._warnings = [] # DocUtilsWarning
+        self._rest = ''
+        self._html = ''
+        self._warnings = []
         self.use_sphinx = False
         self.sphinx_static_path = ''
         self.save_html = False
-        self.html_filepath = '' # Property(str, depends_on='filepath')
+        self.html_filepath = ''
         self._pool = None
         self._processing = False
         self._queued = False
@@ -124,7 +115,6 @@ class ESphinxModel(object):
     
     def get_html(self):
         return self._html
-        #return '\n'.join(self._html.split('\n')[1:])
     
     def get_warnreport(self):
         return self._warnreport
@@ -132,7 +122,6 @@ class ESphinxModel(object):
     def _rest_changed(self):
         self.dirty = True
 
-    # @on_trait_change('rest, use_sphinx, sphinx_static_path')
     def _queue_html(self):
         if self._processing:
             self._queued = True
@@ -162,7 +151,7 @@ class ESphinxModel(object):
                 try:
                     description = node.children[0].children[0] #.data
                 except AttributeError, e:
-                    print e
+                    print "Attribute Error: %s" % str(e)
                     continue
                 self._warnreport.add(node.attributes['level'],
                                      node.attributes['line'],
@@ -176,10 +165,6 @@ class ESphinxModel(object):
         if index != -1:
             filepath = filepath[:index]
         return filepath + '.html'
-
-    #-----------------------------------------------------------------
-    #  CanSaveMixin interface
-    #-----------------------------------------------------------------
 
     def validate(self):
         """ Prompt the user if there are warnings/errors with reST file.

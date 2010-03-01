@@ -7,6 +7,36 @@ import threading
 # import codecs
 # from os.path import isfile
 
+
+class WarningReportView(QtGui.QTableView):
+    """
+    """
+
+    def __init__(self, view): 
+        QtGui.QTableView.__init__(self) 
+        self._parentview = view
+        font = QtGui.QFont()
+        font.setPointSize(10)
+        self.setFont(font)
+        font = QtGui.QFont()
+        font.setWeight(QtGui.QFont.Bold)
+        self.setAlternatingRowColors(True)
+        header = self.horizontalHeader()
+        header.setFont(font) 
+        header.setStretchLastSection(True)
+        self.setSelectionMode(QtGui.QAbstractItemView.SingleSelection)
+        self.setSelectionBehavior(QtGui.QAbstractItemView.SelectRows)
+
+    def currentChanged(self, current, previous):
+        row = current.row()
+        line = self.model().get_line(row)
+        self._parentview.select_line(line)
+
+    def refresh(self):
+        self.resizeColumnToContents(0)
+        self.resizeColumnToContents(1)
+        self.resizeRowsToContents()
+
 class ESphinxView(QtGui.QMainWindow):
 
     def __init__(self, parent=None):
@@ -67,40 +97,20 @@ class ESphinxView(QtGui.QMainWindow):
         self.emit(QtCore.SIGNAL('_reload()'))
 
     def select_line(self, line):
-        lineColor = QtGui.QColor(QtCore.Qt.yellow).lighter(160)
+        lineColor = QtGui.QColor(QtCore.Qt.gray).lighter(150)
         selection = QtGui.QTextEdit.ExtraSelection()
         selection.format.setBackground(lineColor)
         selection.format.setProperty(QtGui.QTextFormat.FullWidthSelection, 
                                      True)
         textedit = self._ui.textedit
-        selection.cursor = textedit.textCursor() # use current line, not cursor
+        cursor = textedit.textCursor()
+        cursor.movePosition(QtGui.QTextCursor.Start, 
+                            QtGui.QTextCursor.MoveAnchor, 1)
+        cursor.movePosition(QtGui.QTextCursor.Down, 
+                            QtGui.QTextCursor.MoveAnchor, line-1)
+        selection.cursor = cursor
         selection.cursor.clearSelection()
+        textedit.setTextCursor(cursor)
         extraSelections = []
         extraSelections.append(selection)
         textedit.setExtraSelections(extraSelections)
-
-
-class WarningReportView(QtGui.QTableView):
-    """
-    """
-
-    def __init__(self, view): 
-        QtGui.QTableView.__init__(self) 
-        self._parentview = view
-        font = QtGui.QFont()
-        font.setPointSize(10)
-        self.setFont(font)
-        font = QtGui.QFont()
-        font.setWeight(QtGui.QFont.Bold)
-        self.setAlternatingRowColors(True)
-        header = self.horizontalHeader()
-        header.setFont(font) 
-        header.setStretchLastSection(True)
-
-    def currentChanged(self, current, previous):
-        row = current.row()
-        line = self.model().get_line(row)
-        self._parentview.select_line(line)
-
-    def refresh(self):
-        self.resizeRowsToContents()
