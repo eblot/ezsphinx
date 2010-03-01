@@ -80,9 +80,15 @@ class WarningReportModel(QtCore.QAbstractTableModel):
         self._warnings = []
     
     def add(self, level=0, line=0, desc=''):
-        print "Warning: %d:%d %s" % (level, line, desc)
+        # print "Warning: %d:%d %s" % (level, line, desc)
         self._warnings.append((line, self.levels[level], desc))
         self.insertRows(0, 1)
+    
+    def get_line(self, row):
+        try:
+            return self._warnings[row][0]
+        except KeyError:
+            return 0
 
 
 class ESphinxModel(object):

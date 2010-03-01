@@ -38,8 +38,10 @@ class ESphinxView(QtGui.QMainWindow):
         self._ui.textlayout.setContentsMargins(0,0,2,0)
         self._ui.weblayout.setContentsMargins(2,0,2,2)
         self._ui.tablelayout.setContentsMargins(4,0,4,0)
-        self._warnreportview = WarningReportView()
+        self._warnreportview = WarningReportView(self)
         self._ui.tablelayout.addWidget(self._warnreportview)
+        self._ui.menubar.setNativeMenuBar(True)
+        # file_menu = self._ui.menubar.addMenu(self.tr("&File"));
 
     def set_model(self, model):
         self._model = model
@@ -64,13 +66,27 @@ class ESphinxView(QtGui.QMainWindow):
         self._lock.release()
         self.emit(QtCore.SIGNAL('_reload()'))
 
+    def select_line(self, line):
+        lineColor = QtGui.QColor(QtCore.Qt.yellow).lighter(160)
+        selection = QtGui.QTextEdit.ExtraSelection()
+        selection.format.setBackground(lineColor)
+        selection.format.setProperty(QtGui.QTextFormat.FullWidthSelection, 
+                                     True)
+        textedit = self._ui.textedit
+        selection.cursor = textedit.textCursor() # use current line, not cursor
+        selection.cursor.clearSelection()
+        extraSelections = []
+        extraSelections.append(selection)
+        textedit.setExtraSelections(extraSelections)
+
 
 class WarningReportView(QtGui.QTableView):
     """
     """
 
-    def __init__(self, *args): 
-        QtGui.QTableView.__init__(self, *args) 
+    def __init__(self, view): 
+        QtGui.QTableView.__init__(self) 
+        self._parentview = view
         font = QtGui.QFont()
         font.setPointSize(10)
         self.setFont(font)
@@ -80,6 +96,11 @@ class WarningReportView(QtGui.QTableView):
         header = self.horizontalHeader()
         header.setFont(font) 
         header.setStretchLastSection(True)
+
+    def currentChanged(self, current, previous):
+        row = current.row()
+        line = self.model().get_line(row)
+        self._parentview.select_line(line)
 
     def refresh(self):
         self.resizeRowsToContents()
