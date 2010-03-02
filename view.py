@@ -37,8 +37,11 @@ class WarningReportView(QtGui.QTableView):
         self.resizeColumnToContents(1)
         self.resizeRowsToContents()
 
-class ESphinxView(QtGui.QMainWindow):
 
+class ESphinxView(QtGui.QMainWindow):
+    """
+    """
+    
     def __init__(self, parent=None):
         QtGui.QWidget.__init__(self, parent)
         self._model = None
@@ -72,6 +75,7 @@ class ESphinxView(QtGui.QMainWindow):
         self._ui.tablelayout.addWidget(self._warnreportview)
         self._ui.menubar.setNativeMenuBar(True)
         # file_menu = self._ui.menubar.addMenu(self.tr("&File"));
+        self._formats = {}
 
     def set_model(self, model):
         self._model = model
@@ -114,3 +118,32 @@ class ESphinxView(QtGui.QMainWindow):
         extraSelections = []
         extraSelections.append(selection)
         textedit.setExtraSelections(extraSelections)
+        self.update_background()
+        
+    def update_background(self):
+        lines = self._model.get_warnreport().get_lines()
+        print "Update: %s" % lines
+        
+        textedit = self._ui.textedit
+        if not self._formats:
+            format = textedit.document().findBlock(0).blockFormat()
+            self._formats[''] = format 
+            format = QtGui.QTextBlockFormat(format)
+            brush = QtGui.QBrush(QtGui.QColor(QtCore.Qt.red).lighter(160))
+            format.setBackground(brush)
+            self._formats['w'] = format.toBlockFormat()
+
+        # could be optmizeed to move only once
+        for line in lines:
+            line = line-1
+            # start setting new background color
+            cursor = textedit.textCursor()
+            cursor.movePosition(QtGui.QTextCursor.Start, 
+                                QtGui.QTextCursor.MoveAnchor, 1)
+            cursor.movePosition(QtGui.QTextCursor.Down, 
+                                QtGui.QTextCursor.MoveAnchor, line)
+            cursor.setBlockFormat(self._formats['w'])
+            # stop setting new background color
+            cursor.movePosition(QtGui.QTextCursor.NextBlock, 
+                                QtGui.QTextCursor.MoveAnchor, 1)
+            cursor.setBlockFormat(self._formats[''])
