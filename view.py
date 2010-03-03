@@ -31,6 +31,7 @@ class WarningReportView(QtGui.QTableView):
         row = current.row()
         line = self.model().get_line(row)
         self._parentview.select_line(line)
+        self._parentview.set_focus_textedit()
 
     def refresh(self):
         self.resizeColumnToContents(0)
@@ -41,8 +42,6 @@ class WarningReportView(QtGui.QTableView):
 class ESphinxView(QtGui.QMainWindow):
     """
     """
-    
-    COLORS = 'green yellow blue red'.split()
     
     def __init__(self, parent=None):
         QtGui.QWidget.__init__(self, parent)
@@ -61,6 +60,8 @@ class ESphinxView(QtGui.QMainWindow):
         self._lock = threading.Lock()
         self._docs = []
         font = QtGui.QFont()
+        # need to use sys.platform to define the best font for each major
+        # platform? Linux: dunno, Windows: Courier New (ah ah), Mac: Monaco
         font.setFamily("Monaco")
         font.setPointSize(11)
         self._ui.textedit.setFont(font)
@@ -81,7 +82,40 @@ class ESphinxView(QtGui.QMainWindow):
     def set_model(self, model):
         self._model = model
         self._warnreportview.setModel(model.get_warnreport())
+    
+    def set_focus_textedit(self):
+        self._ui.textedit.activateWindow()
+        self._ui.textedit.setFocus()
 
+    @staticmethod
+    def differentiate(old, new):
+        sold = set(old)
+        snew = set(new)
+        mark, sweep = snew.difference(sold), sold.difference(snew)
+        dwarn = {}
+        for m in mark:
+            dwarn[m] = new[m]
+        for s in sweep:
+            dwarn[s] = 0
+        return dwarn
+        
+    def refresh(self):
+        # called from a worker thread, need to dispath the event with the
+        # help of a slot/signal
+        self._lock.acquire()
+        self._docs.append(self._model.get_html())
+        self._lock.release()
+        self.emit(QtCore.SIGNAL('_reload()'))
+
+    def select_line(self, line):
+        textedit = self._ui.textedit
+        cursor = textedit.textCursor()
+        cursor.movePosition(QtGui.QTextCursor.Start, 
+                            QtGui.QTextCursor.MoveAnchor, 1)
+        cursor.movePosition(QtGui.QTextCursor.Down, 
+                            QtGui.QTextCursor.MoveAnchor, line-1)
+        textedit.setTextCursor(cursor)
+        
     def _textedit_update(self):
         # Ok, so textChanged is stupid, as it gets signalled when *text*
         # is not changed but formatting is. So we need to discriminate from
@@ -108,106 +142,48 @@ class ESphinxView(QtGui.QMainWindow):
         textedit = self._ui.textedit
         format = textedit.document().findBlock(0).blockFormat()
         self._formats[0] = format
-        for lvl,color in enumerate(self.COLORS):
+        hues = (120, 60, 30, 0)
+        for lvl, hue in enumerate(hues):
             format = QtGui.QTextBlockFormat(format)
-            brush = QtGui.QBrush(QtGui.QColor(color))
-            format.setBackground(brush)
+            color = QtGui.QColor()
+            color.setHsv(hue, 95, 255)
+            format.setBackground(color)
             self._formats[lvl+1] = format.toBlockFormat()
 
-    def refresh(self):
-        # called from a worker thread, need to dispath the event with the
-        # help of a slot/signal
-        self._lock.acquire()
-        self._docs.append(self._model.get_html())
-        self._lock.release()
-        self.emit(QtCore.SIGNAL('_reload()'))
-
-    def select_line(self, line):
-        lineColor = QtGui.QColor(QtCore.Qt.gray).lighter(150)
-        selection = QtGui.QTextEdit.ExtraSelection()
-        selection.format.setBackground(lineColor)
-        selection.format.setProperty(QtGui.QTextFormat.FullWidthSelection, 
-                                     True)
-        textedit = self._ui.textedit
-        cursor = textedit.textCursor()
-        cursor.movePosition(QtGui.QTextCursor.Start, 
-                            QtGui.QTextCursor.MoveAnchor, 1)
-        cursor.movePosition(QtGui.QTextCursor.Down, 
-                            QtGui.QTextCursor.MoveAnchor, line-1)
-        selection.cursor = cursor
-        selection.cursor.clearSelection()
-        textedit.setTextCursor(cursor)
-        extraSelections = []
-        extraSelections.append(selection)
-        textedit.setExtraSelections(extraSelections)
-        
     def _update_background(self):
         lines = self._model.get_warnreport().get_lines()
         warnings = self.differentiate(self._last_warnings, lines) 
         self._last_warnings = lines
-
-        if not self._formats:
-            self._generate_formats()
-        textedit = self._ui.textedit
-
-        # could be optmized to move only once
         for line in sorted(warnings):
-            print "LINE %d" % line
-            level = warnings[line]
-            line = line-1
-            # start setting new background color
-            cursor = textedit.textCursor()
-            #print "A (%d,%d)" % (cursor.blockNumber(), cursor.columnNumber()),
-            cursor.movePosition(QtGui.QTextCursor.Start, 
-                                QtGui.QTextCursor.MoveAnchor, 1)
-            #print "B (%d,%d)" % (cursor.blockNumber(), cursor.columnNumber()),
-            cursor.movePosition(QtGui.QTextCursor.Down, 
-                                QtGui.QTextCursor.MoveAnchor, line)
-            print "C (%d,%d)" % (cursor.blockNumber(), cursor.columnNumber()),
-            cursor.setBlockFormat(self._formats[level])
-            # stop setting new background color, only if there a next block
-            # if no block existed after the current block, the current block
-            # would be updated with the default format
-            move = cursor.movePosition(QtGui.QTextCursor.Down,
-                                       QtGui.QTextCursor.MoveAnchor, 1)
-            print "D (%d,%d)" % (cursor.blockNumber(), cursor.columnNumber())
-            if move:
-                cursor.setBlockFormat(self._formats[0])
+            self._set_line_background(line, warnings[line])
     
     def _update_line(self):
-        if not self._formats:
-            self._generate_formats()
         textedit = self._ui.textedit
         cursor = textedit.textCursor()
         line = cursor.blockNumber()
-        lines = filter(lambda x: x>0, [line, line+1])
+        lines = filter(lambda x: x>0, [line-1, line, line+1])
         for line in lines:
             level = line in self._last_warnings and \
                 self._last_warnings[line] or 0
-            cursor.movePosition(QtGui.QTextCursor.StartOfBlock,
-                                QtGui.QTextCursor.MoveAnchor, 1)
-            print "X (%d,%d)" % (cursor.blockNumber(), cursor.columnNumber()),
-            cursor.setBlockFormat(self._formats[level])
-            # stop setting new background color, only if there a next block
-            # if no block existed after the current block, the current block
-            # would be updated with the default format
-            move = cursor.movePosition(QtGui.QTextCursor.Down, 
-                                       QtGui.QTextCursor.MoveAnchor, 1)
-            print "Y (%d,%d)" % (cursor.blockNumber(), cursor.columnNumber())
-            if move:
-                line += 1
-                level = line in self._last_warnings and \
-                    self._last_warnings[line] or 0
-                cursor.setBlockFormat(self._formats[level])
+            self._set_line_background(line, level)
 
-    @staticmethod
-    def differentiate(old, new):
-        sold = set(old)
-        snew = set(new)
-        mark, sweep = snew.difference(sold), sold.difference(snew)
-        dwarn = {}
-        for m in mark:
-            dwarn[m] = new[m]
-        for s in sweep:
-            dwarn[s] = 0
-        return dwarn
+    def _set_line_background(self, line, level):
+        if not self._formats:
+            self._generate_formats()
+        line = line-1
+        textedit = self._ui.textedit
+        cursor = textedit.textCursor()
+        cline = cursor.blockNumber()
+        delta = line-cline
+        if delta < 0:
+            move = cursor.movePosition(QtGui.QTextCursor.Up, 
+                                       QtGui.QTextCursor.MoveAnchor,
+                                       abs(delta))
+        elif delta > 0:
+            move = cursor.movePosition(QtGui.QTextCursor.Down, 
+                                       QtGui.QTextCursor.MoveAnchor,
+                                       abs(delta))
+        else:
+            move = False
+        cursor.setBlockFormat(self._formats[level])
+        return move
