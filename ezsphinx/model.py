@@ -112,6 +112,15 @@ class ESphinxModel(object):
         #    self._processing = True
         #    self._gen_html()
 
+    def quit(self):
+        # terminate the pool's subprocess on our own, so that we can catch
+        # any termination exception and discard it
+        try:
+            self._pool.terminate()
+        except OSError:
+            pass
+        self._pool.join()
+    
     def add_view(self, view):
         if view not in self._views:
             self._views.append(view)
