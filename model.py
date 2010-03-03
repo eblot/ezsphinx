@@ -40,7 +40,7 @@ class WarningReportModel(QtCore.QAbstractTableModel):
     """
     """
     columns = ('Line', 'Level', 'Description')
-    levels = ('Debug','Info','Warning','Error','Severe','Critical')
+    levels = ('Debug', 'Info', 'Warning', 'Error', 'Severe')
     
     def __init__(self, parent=None): 
         QtCore.QAbstractTableModel.__init__(self, parent)
@@ -56,8 +56,11 @@ class WarningReportModel(QtCore.QAbstractTableModel):
         if not index.isValid():
             return QtCore.QVariant()
         if role != QtCore.Qt.DisplayRole:
-            return QtCore.QVariant() 
-        return QtCore.QVariant(self._warnings[index.row()][index.column()])
+            return QtCore.QVariant()
+        item = self._warnings[index.row()][index.column()]
+        if index.column() == 1:
+            item = self.levels[item]
+        return QtCore.QVariant(item)
     
     def headerData(self, section, orientation, role):
         if role != QtCore.Qt.DisplayRole:
@@ -71,8 +74,7 @@ class WarningReportModel(QtCore.QAbstractTableModel):
         self._warnings = []
     
     def add(self, level=0, line=0, desc=''):
-        # print "Warning: %d:%d %s" % (level, line, desc)
-        self._warnings.append((line, self.levels[level], desc))
+        self._warnings.append((line, level, desc))
         self.insertRows(0, 1)
     
     def get_line(self, row):
@@ -82,9 +84,9 @@ class WarningReportModel(QtCore.QAbstractTableModel):
             return 0
     
     def get_lines(self):
-        lines = set()
+        lines = {}
         for w in self._warnings:
-            lines.add(w[0])
+            lines[w[0]] = w[1]
         return lines
 
 

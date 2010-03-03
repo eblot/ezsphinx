@@ -42,6 +42,8 @@ class ESphinxView(QtGui.QMainWindow):
     """
     """
     
+    COLORS = 'green yellow blue red'.split()
+    
     def __init__(self, parent=None):
         QtGui.QWidget.__init__(self, parent)
         self._model = None
@@ -53,12 +55,9 @@ class ESphinxView(QtGui.QMainWindow):
         #QtCore.QObject.connect(self.ui.editor_window,QtCore.SIGNAL("textChanged()"), self.enable_save)
         #QtCore.QObject.connect(self.watcher,QtCore.SIGNAL("fileChanged(const QString&)"), self.file_changed)
         #self.filename = False
-        QtCore.QObject.connect(self._ui.textedit,
-                               QtCore.SIGNAL("textChanged()"), 
-                               self._textedit_update) 
-        QtCore.QObject.connect(self,
-                               QtCore.SIGNAL("_reload()"), 
-                               self._reload)
+        self._ui.textedit.textChanged.connect(self._textedit_update)
+        self._ui.textedit.blockCountChanged.connect(self._blockcount_update)
+        QtCore.QObject.connect(self, QtCore.SIGNAL("_reload()"), self._reload)
         self._lock = threading.Lock()
         self._docs = []
         font = QtGui.QFont()
@@ -76,14 +75,24 @@ class ESphinxView(QtGui.QMainWindow):
         self._ui.menubar.setNativeMenuBar(True)
         # file_menu = self._ui.menubar.addMenu(self.tr("&File"));
         self._formats = {}
+        self._last_text_len = 0
+        self._last_warnings = {}
 
     def set_model(self, model):
         self._model = model
         self._warnreportview.setModel(model.get_warnreport())
 
     def _textedit_update(self):
-        if self._model:
-            self._model.update_rest(self._ui.textedit.toPlainText())
+        # Ok, so textChanged is stupid, as it gets signalled when *text*
+        # is not changed but formatting is. So we need to discriminate from
+        # both kind of calls...
+        text = self._ui.textedit.toPlainText()
+        if len(text) != self._last_text_len:
+            self._last_text_len = len(text)
+            self._model.update_rest(text)
+    
+    def _blockcount_update(self, newcount):
+        self._update_line()
 
     def _reload(self):
         self._lock.acquire()
@@ -91,6 +100,19 @@ class ESphinxView(QtGui.QMainWindow):
         self._lock.release()
         self._ui.webview.setHtml(doc)
         self._warnreportview.refresh()
+        self._update_background()
+    
+    def _generate_formats(self):
+        if self._formats:
+            return
+        textedit = self._ui.textedit
+        format = textedit.document().findBlock(0).blockFormat()
+        self._formats[0] = format
+        for lvl,color in enumerate(self.COLORS):
+            format = QtGui.QTextBlockFormat(format)
+            brush = QtGui.QBrush(QtGui.QColor(color))
+            format.setBackground(brush)
+            self._formats[lvl+1] = format.toBlockFormat()
 
     def refresh(self):
         # called from a worker thread, need to dispath the event with the
@@ -118,32 +140,74 @@ class ESphinxView(QtGui.QMainWindow):
         extraSelections = []
         extraSelections.append(selection)
         textedit.setExtraSelections(extraSelections)
-        self.update_background()
         
-    def update_background(self):
+    def _update_background(self):
         lines = self._model.get_warnreport().get_lines()
-        print "Update: %s" % lines
-        
-        textedit = self._ui.textedit
-        if not self._formats:
-            format = textedit.document().findBlock(0).blockFormat()
-            self._formats[''] = format 
-            format = QtGui.QTextBlockFormat(format)
-            brush = QtGui.QBrush(QtGui.QColor(QtCore.Qt.red).lighter(160))
-            format.setBackground(brush)
-            self._formats['w'] = format.toBlockFormat()
+        warnings = self.differentiate(self._last_warnings, lines) 
+        self._last_warnings = lines
 
-        # could be optmizeed to move only once
-        for line in lines:
+        if not self._formats:
+            self._generate_formats()
+        textedit = self._ui.textedit
+
+        # could be optmized to move only once
+        for line in sorted(warnings):
+            print "LINE %d" % line
+            level = warnings[line]
             line = line-1
             # start setting new background color
             cursor = textedit.textCursor()
+            #print "A (%d,%d)" % (cursor.blockNumber(), cursor.columnNumber()),
             cursor.movePosition(QtGui.QTextCursor.Start, 
                                 QtGui.QTextCursor.MoveAnchor, 1)
+            #print "B (%d,%d)" % (cursor.blockNumber(), cursor.columnNumber()),
             cursor.movePosition(QtGui.QTextCursor.Down, 
                                 QtGui.QTextCursor.MoveAnchor, line)
-            cursor.setBlockFormat(self._formats['w'])
-            # stop setting new background color
-            cursor.movePosition(QtGui.QTextCursor.NextBlock, 
+            print "C (%d,%d)" % (cursor.blockNumber(), cursor.columnNumber()),
+            cursor.setBlockFormat(self._formats[level])
+            # stop setting new background color, only if there a next block
+            # if no block existed after the current block, the current block
+            # would be updated with the default format
+            move = cursor.movePosition(QtGui.QTextCursor.Down,
+                                       QtGui.QTextCursor.MoveAnchor, 1)
+            print "D (%d,%d)" % (cursor.blockNumber(), cursor.columnNumber())
+            if move:
+                cursor.setBlockFormat(self._formats[0])
+    
+    def _update_line(self):
+        if not self._formats:
+            self._generate_formats()
+        textedit = self._ui.textedit
+        cursor = textedit.textCursor()
+        line = cursor.blockNumber()
+        lines = filter(lambda x: x>0, [line, line+1])
+        for line in lines:
+            level = line in self._last_warnings and \
+                self._last_warnings[line] or 0
+            cursor.movePosition(QtGui.QTextCursor.StartOfBlock,
                                 QtGui.QTextCursor.MoveAnchor, 1)
-            cursor.setBlockFormat(self._formats[''])
+            print "X (%d,%d)" % (cursor.blockNumber(), cursor.columnNumber()),
+            cursor.setBlockFormat(self._formats[level])
+            # stop setting new background color, only if there a next block
+            # if no block existed after the current block, the current block
+            # would be updated with the default format
+            move = cursor.movePosition(QtGui.QTextCursor.Down, 
+                                       QtGui.QTextCursor.MoveAnchor, 1)
+            print "Y (%d,%d)" % (cursor.blockNumber(), cursor.columnNumber())
+            if move:
+                line += 1
+                level = line in self._last_warnings and \
+                    self._last_warnings[line] or 0
+                cursor.setBlockFormat(self._formats[level])
+
+    @staticmethod
+    def differentiate(old, new):
+        sold = set(old)
+        snew = set(new)
+        mark, sweep = snew.difference(sold), sold.difference(snew)
+        dwarn = {}
+        for m in mark:
+            dwarn[m] = new[m]
+        for s in sweep:
+            dwarn[s] = 0
+        return dwarn
