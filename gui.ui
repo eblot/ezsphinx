@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>ezSphinx</string>
   </property>
   <widget class="QWidget" name="mainwidget">
    <property name="mouseTracking">
