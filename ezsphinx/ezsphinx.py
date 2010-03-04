@@ -23,7 +23,11 @@ class EzSphinxApp(QtGui.QApplication):
     def _quit(self):
         self._model.quit()
         
-        
+
+def main():
+    app = EzSphinxApp(sys.argv)
+    sys.exit(app.run())
+     
 if __name__ == "__main__":
     app = EzSphinxApp(sys.argv)
     sys.exit(app.run())
