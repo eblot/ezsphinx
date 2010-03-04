@@ -162,7 +162,7 @@ class ESphinxModel(object):
             self._queued = False
         else:
             self._processing = False
-            self._html, warning_nodes = result
+            self._html, warning_nodes = result[0].decode('utf-8'), result[1]
             self._warnreport.reset()
             for node in warning_nodes:
                 try:

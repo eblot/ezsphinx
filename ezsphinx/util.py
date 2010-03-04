@@ -58,7 +58,7 @@ def docutils_rest_to_html(rest):
     pub.get_settings() # Get the default settings
     pub.settings.halt_level = 6 # Don't halt on errors
     pub.settings.warning_stream = '' # Avoid replicating warnings to stderr
-    pub.set_source(source=str(rest))
+    pub.set_source(source=unicode(rest))
     pub.set_destination()
     pub.document = pub.reader.read(pub.source, pub.parser, pub.settings)
     pub.apply_transforms()
