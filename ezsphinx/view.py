@@ -1,12 +1,29 @@
 # import sys
 from PyQt4 import QtCore, QtGui, QtWebKit
+from ConfigParser import SafeConfigParser as ConfigParser
 from gui import Ui_MainWindow
+import binascii
 import os
 import tempfile
+import time 
 import threading
 # import codecs
 # from os.path import isfile
 
+class EasyConfigParser(ConfigParser):
+    """Simplify defaut configuration"""
+    
+    def get(self, section, option, default=None):
+        if not self.has_section(section):
+            return default
+        if not self.has_option(section, option):
+            return default
+        return ConfigParser.get(self, section, option)
+
+    def set(self, section, option, value):
+        if not self.has_section(section):
+            self.add_section(section)
+        ConfigParser.set(self, section, option, str(value))
 
 class WarningReportView(QtGui.QTableView):
     """
@@ -59,12 +76,7 @@ class ESphinxView(QtGui.QMainWindow):
         QtCore.QObject.connect(self, QtCore.SIGNAL("_reload()"), self._reload)
         self._lock = threading.Lock()
         self._docs = []
-        font = QtGui.QFont()
-        # need to use sys.platform to define the best font for each major
-        # platform? Linux: dunno, Windows: Courier New (ah ah), Mac: Monaco
-        font.setFamily("Monaco")
-        font.setPointSize(11)
-        self._ui.textedit.setFont(font)
+
         self._ui.webview.setTextSizeMultiplier(0.8)
         self._ui.hlayout.setContentsMargins(4,4,4,0)
         self._ui.vlayout.setContentsMargins(4,0,4,0)
@@ -75,20 +87,37 @@ class ESphinxView(QtGui.QMainWindow):
         self._ui.tablelayout.addWidget(self._warnreportview)
         self._ui.menubar.setNativeMenuBar(True)
         # file_menu = self._ui.menubar.addMenu(self.tr("&File"));
+        
+        keyseq = QtGui.QKeySequence("Ctrl+T")
+        shortcut = QtGui.QShortcut(keyseq, self._ui.textedit)
+        self.connect(shortcut, QtCore.SIGNAL('activated()'), self._choose_font)
+        self._ui.hsplitter.splitterMoved.connect(self._splitter_update)
+        self._ui.vsplitter.splitterMoved.connect(self._splitter_update)
+        
         self._formats = {}
         self._last_text_len = 0
         self._last_warnings = {}
+        self._ui_change_timer = QtCore.QTimer()
+        self._ui_change_timer.timeout.connect(self._timer_exhaust)
+        
+        # load last user settings
+        self._load_preferences()
 
     def set_model(self, model):
+        """assign the model that backs up the view"""
         self._model = model
         self._warnreportview.setModel(model.get_warnreport())
     
     def set_focus_textedit(self):
+        """set the focus back to the textedit to resume editing"""
         self._ui.textedit.activateWindow()
         self._ui.textedit.setFocus()
 
     @staticmethod
     def differentiate(old, new):
+        """compute the differential between the previous set of warnings and
+           the latest processed one, returning a dictionary of line-indexed
+           warning levels"""
         sold = set(old)
         snew = set(new)
         mark, sweep = snew.difference(sold), sold.difference(snew)
@@ -100,8 +129,8 @@ class ESphinxView(QtGui.QMainWindow):
         return dwarn
         
     def refresh(self):
-        # called from a worker thread, need to dispath the event with the
-        # help of a slot/signal
+        """called from a worker thread, need to dispath the event with the
+           help of a slot/signal"""
         self._lock.acquire()
         self._docs.append(self._model.get_html())
         self._lock.release()
@@ -115,8 +144,13 @@ class ESphinxView(QtGui.QMainWindow):
         cursor.movePosition(QtGui.QTextCursor.Down, 
                             QtGui.QTextCursor.MoveAnchor, line-1)
         textedit.setTextCursor(cursor)
-        
+    
+    #-------------------------------------------------------------------------
+    # Signal handlers (slots)
+    #-------------------------------------------------------------------------
+
     def _textedit_update(self):
+        """^: something in the textedit widget has been updated"""
         # Ok, so textChanged is stupid, as it gets signalled when *text*
         # is not changed but formatting is. So we need to discriminate from
         # both kind of calls...
@@ -126,31 +160,42 @@ class ESphinxView(QtGui.QMainWindow):
             self._model.update_rest(text)
     
     def _blockcount_update(self, newcount):
+        """^: a new line has been added or an existing line got removed"""
         self._update_line()
 
+    def _choose_font(self):
+        """^: user requested the font dialog for the textedit window"""
+        font = self._ui.textedit.font()
+        (font, ok) = QtGui.QFontDialog.getFont(font)
+        if ok:
+            self._ui.textedit.setFont(font)
+            self._save_preferences()
+
+    def _splitter_update(self, pos, index):
+        """^: a splitter has been moved"""
+        self._ui_change_timer.stop()
+        self._ui_change_timer.start(1000)
+
     def _reload(self):
+        """^: internal handler to refresh the textedit content asynchronously"""
         self._lock.acquire()
         doc = self._docs.pop(0)
         self._lock.release()
         self._ui.webview.setHtml(doc)
         self._warnreportview.refresh()
         self._update_background()
-    
-    def _generate_formats(self):
-        if self._formats:
-            return
-        textedit = self._ui.textedit
-        format = textedit.document().findBlock(0).blockFormat()
-        self._formats[0] = format
-        hues = (120, 60, 30, 0)
-        for lvl, hue in enumerate(hues):
-            format = QtGui.QTextBlockFormat(format)
-            color = QtGui.QColor()
-            color.setHsv(hue, 95, 255)
-            format.setBackground(color)
-            self._formats[lvl+1] = format.toBlockFormat()
 
+    def _timer_exhaust(self):
+        """^: timer-filtered event handler for rapid changing UI mods"""
+        self._save_preferences()
+
+
+    #-------------------------------------------------------------------------
+    # Private implementation
+    #-------------------------------------------------------------------------
+    
     def _update_background(self):
+        """update the background color of all lines that contain errors"""
         lines = self._model.get_warnreport().get_lines()
         warnings = self.differentiate(self._last_warnings, lines) 
         self._last_warnings = lines
@@ -158,6 +203,10 @@ class ESphinxView(QtGui.QMainWindow):
             self._set_line_background(line, warnings[line])
     
     def _update_line(self):
+        """update the background color of a single line
+           it is usually called whenever a new line is inserted or removed, to
+           avoid propagating colored background to a valid line
+        """
         textedit = self._ui.textedit
         cursor = textedit.textCursor()
         line = cursor.blockNumber()
@@ -168,6 +217,7 @@ class ESphinxView(QtGui.QMainWindow):
             self._set_line_background(line, level)
 
     def _set_line_background(self, line, level):
+        """does the actual line background colorization"""
         if not self._formats:
             self._generate_formats()
         line = line-1
@@ -187,3 +237,57 @@ class ESphinxView(QtGui.QMainWindow):
             move = False
         cursor.setBlockFormat(self._formats[level])
         return move
+
+    def _generate_formats(self):
+        """generate background colors for textedit warnings"""
+        if self._formats:
+            return
+        textedit = self._ui.textedit
+        format = textedit.document().findBlock(0).blockFormat()
+        self._formats[0] = format
+        hues = (120, 60, 30, 0)
+        for lvl, hue in enumerate(hues):
+            format = QtGui.QTextBlockFormat(format)
+            color = QtGui.QColor()
+            color.setHsv(hue, 95, 255)
+            format.setBackground(color)
+            self._formats[lvl+1] = format.toBlockFormat()
+
+    def _load_preferences(self):
+        """reload previously saved UI configuration from a file"""
+        # could use a QSetting object, but the API is just boring
+        home = os.environ['HOME']
+        prefs = os.path.join(home, '.ezsphinxrc')
+        config = EasyConfigParser()
+        if not config.read(prefs):
+            return
+        font = config.get('textedit', 'font')
+        if font:
+            qtfont = QtGui.QFont()
+            if qtfont.fromString(font):
+                self._ui.textedit.setFont(qtfont)
+        hsplitter = config.get('main', 'hsplitter')
+        if hsplitter:
+            data = binascii.unhexlify(hsplitter)
+            self._ui.hsplitter.restoreState(data)
+        vsplitter = config.get('main', 'vsplitter')
+        if vsplitter:
+            data = binascii.unhexlify(vsplitter)
+            self._ui.vsplitter.restoreState(data)
+
+    def _save_preferences(self):
+        """save current UI configuration into a configuration file"""
+        # could use a QSetting object, but the API is just boring
+        home = os.environ['HOME']
+        if not home:
+            return
+        config = EasyConfigParser()
+        font = self._ui.textedit.font().toString()
+        config.set('textedit', 'font', font)
+        data = self._ui.hsplitter.saveState()
+        config.set('main', 'hsplitter', binascii.hexlify(data))
+        data = self._ui.vsplitter.saveState()
+        config.set('main', 'vsplitter', binascii.hexlify(data))
+        prefs = os.path.join(home, '.ezsphinxrc')
+        with open(prefs, 'w') as out_:
+            config.write(out_)
