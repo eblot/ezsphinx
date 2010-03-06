@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'gui.ui'
 #
-# Created: Thu Mar  4 00:01:02 2010
+# Created: Sat Mar  6 15:32:49 2010
 #      by: PyQt4 UI code generator 4.7
 #
 # WARNING! All changes made in this file will be lost!
@@ -16,16 +16,29 @@ class Ui_MainWindow(object):
         self.mainwidget = QtGui.QWidget(MainWindow)
         self.mainwidget.setMouseTracking(True)
         self.mainwidget.setObjectName("mainwidget")
-        self.vlayout = QtGui.QVBoxLayout(self.mainwidget)
+        self.flayout = QtGui.QHBoxLayout(self.mainwidget)
+        self.flayout.setObjectName("flayout")
+        self.fsplitter = QtGui.QSplitter(self.mainwidget)
+        self.fsplitter.setOrientation(QtCore.Qt.Horizontal)
+        self.fsplitter.setHandleWidth(7)
+        self.fsplitter.setObjectName("fsplitter")
+        self.ftwidget = QtGui.QWidget(self.fsplitter)
+        self.ftwidget.setObjectName("ftwidget")
+        self.ftlayout = QtGui.QVBoxLayout(self.ftwidget)
+        self.ftlayout.setObjectName("ftlayout")
+        self.filetree = QtGui.QTreeView(self.ftwidget)
+        self.filetree.setObjectName("filetree")
+        self.ftlayout.addWidget(self.filetree)
+        self.vlayout = QtGui.QVBoxLayout(self.fsplitter)
         self.vlayout.setObjectName("vlayout")
-        self.vsplitter = QtGui.QSplitter(self.mainwidget)
+        self.vsplitter = QtGui.QSplitter(self.fsplitter)
         self.vsplitter.setOrientation(QtCore.Qt.Vertical)
         self.vsplitter.setHandleWidth(7)
         self.vsplitter.setObjectName("vsplitter")
         self.editwidget = QtGui.QWidget(self.vsplitter)
         self.editwidget.setObjectName("editwidget")
-        self.hlayout = QtGui.QVBoxLayout(self.editwidget)
-        self.hlayout.setObjectName("hlayout")
+        self.elayout = QtGui.QVBoxLayout(self.editwidget)
+        self.elayout.setObjectName("elayout")
         self.hsplitter = QtGui.QSplitter(self.editwidget)
         self.hsplitter.setOrientation(QtCore.Qt.Horizontal)
         self.hsplitter.setHandleWidth(7)
@@ -45,12 +58,13 @@ class Ui_MainWindow(object):
         self.webview.setUrl(QtCore.QUrl("about:blank"))
         self.webview.setObjectName("webview")
         self.weblayout.addWidget(self.webview)
-        self.hlayout.addWidget(self.hsplitter)
+        self.elayout.addWidget(self.hsplitter)
         self.tablewidget = QtGui.QWidget(self.vsplitter)
         self.tablewidget.setObjectName("tablewidget")
         self.tablelayout = QtGui.QHBoxLayout(self.tablewidget)
         self.tablelayout.setObjectName("tablelayout")
         self.vlayout.addWidget(self.vsplitter)
+        self.flayout.addWidget(self.fsplitter)
         MainWindow.setCentralWidget(self.mainwidget)
         self.menubar = QtGui.QMenuBar(MainWindow)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 929, 22))

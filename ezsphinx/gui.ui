@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>MainWindow</class>
+ 
  <widget class="QMainWindow" name="MainWindow">
+
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -13,63 +15,92 @@
   <property name="windowTitle">
    <string>ezSphinx</string>
   </property>
+  
   <widget class="QWidget" name="mainwidget">
    <property name="mouseTracking">
     <bool>true</bool>
    </property>
 
-   <layout class="QVBoxLayout" name="vlayout">
+   <layout class="QHBoxLayout" name="flayout">
     <item>
-     <widget class="QSplitter" name="vsplitter">
+     <widget class="QSplitter" name="fsplitter">
       <property name="orientation">
-       <enum>Qt::Vertical</enum>
+       <enum>Qt::Horizontal</enum>
       </property>
       <property name="handleWidth">
        <number>7</number>
       </property>
-      <widget class="QWidget" name="editwidget">
-       <layout class="QVBoxLayout" name="hlayout">
-        <item>
-         <widget class="QSplitter" name="hsplitter">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="handleWidth">
-           <number>7</number>
-          </property>
-          <widget class="QWidget" name="textwidget">
-           <layout class="QHBoxLayout" name="textlayout">
-            <item>
-             <widget class="QPlainTextEdit" name="textedit">
+
+      <widget class="QWidget" name="ftwidget">
+      <layout class="QVBoxLayout" name="ftlayout">
+       <item>
+        <widget class="QTreeView" name="filetree">
+        </widget>
+       </item>
+      </layout>
+     </widget>
+  
+      <layout class="QVBoxLayout" name="vlayout">
+       <item>
+        <widget class="QSplitter" name="vsplitter">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="handleWidth">
+          <number>7</number>
+         </property>
+         
+         <widget class="QWidget" name="editwidget">
+          <layout class="QVBoxLayout" name="elayout">
+           <item>
+            <widget class="QSplitter" name="hsplitter">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="handleWidth">
+              <number>7</number>
+             </property>
+             <widget class="QWidget" name="textwidget">
+              <layout class="QHBoxLayout" name="textlayout">
+               <item>
+                <widget class="QPlainTextEdit" name="textedit">
+                </widget>
+               </item>
+              </layout>
              </widget>
-            </item>
-           </layout>
-          </widget>
-          <widget class="QWidget" name="webwidget">
-           <layout class="QHBoxLayout" name="weblayout">
-            <item>
-             <widget class="QWebView" name="webview">
-              <property name="url">
-               <url>
-                <string>about:blank</string>
-               </url>
-              </property>
+             <widget class="QWidget" name="webwidget">
+              <layout class="QHBoxLayout" name="weblayout">
+               <item>
+                <widget class="QWebView" name="webview">
+                 <property name="url">
+                  <url>
+                   <string>about:blank</string>
+                  </url>
+                 </property>
+                </widget>
+               </item>
+              </layout>
              </widget>
-            </item>
-           </layout>
-          </widget>
+            </widget>
+           </item>
+          </layout>
          </widget>
-        </item>
-       </layout>
-      </widget>
-      <widget class="QWidget" name="tablewidget">
-       <layout class="QHBoxLayout" name="tablelayout">
-       </layout>
-      </widget>
+         
+         <widget class="QWidget" name="tablewidget">
+          <layout class="QHBoxLayout" name="tablelayout">
+          </layout>
+         </widget>
+   
+        </widget>
+       </item>
+      </layout>
+   
      </widget>
     </item>
    </layout>
+
   </widget>
+
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
@@ -82,6 +113,7 @@
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
+ 
  <customwidgets>
   <customwidget>
    <class>QWebView</class>
@@ -89,6 +121,7 @@
    <header>QtWebKit/QWebView</header>
   </customwidget>
  </customwidgets>
+
  <resources/>
  <connections/>
 </ui>

@@ -17,23 +17,15 @@
 
 # Standard library imports
 import codecs
-from multiprocessing import Pool
-
-# ETS imports
-# from enthought.traits.api import HasTraits, Int, Str, List, Bool, Any, \
-#    Property, on_trait_change
-# from enthought.traits.ui.extras.saving import CanSaveMixin
-
-# Local imports. Because of an apparent bug in multiprocessing where functions
-# cannot be defined outside the module where apply_async is called, we define
-# some fake functions here.
+import os
 import util
+from multiprocessing import Pool
+from PyQt4 import QtCore, QtGui, QtWebKit
+
 def docutils_rest_to_html(rest):
     return util.docutils_rest_to_html(rest)
 def sphinx_rest_to_html(rest, static_path=util.DEFAULT_STATIC_PATH):
     return util.sphinx_rest_to_html(rest, static_path)
-
-from PyQt4 import QtCore, QtGui, QtWebKit
 
 
 class WarningReportModel(QtCore.QAbstractTableModel):
@@ -90,14 +82,26 @@ class WarningReportModel(QtCore.QAbstractTableModel):
         return lines
 
 
+class FileTreeModel(QtGui.QDirModel):
+    """File tree"""
+
+    def __init__(self):
+        QtGui.QDirModel.__init__(self)
+        self.setFilter(QtCore.QDir.Dirs | 
+                       QtCore.QDir.NoDotAndDotDot |
+                       QtCore.QDir.Files)
+
+
 class ESphinxModel(object):
     """
     """
     
     def __init__(self, **kw):
+        self._dirty = False
         self._rest = ''
         self._html = ''
         self._warnings = []
+        self._filepath = ''
         self.use_sphinx = False
         self.sphinx_static_path = ''
         self.save_html = False
@@ -108,6 +112,7 @@ class ESphinxModel(object):
         self._pool = Pool(processes=1)
         self._views = []
         self._warnreport = WarningReportModel()
+        self._filetree = FileTreeModel()
         #if self._html == '' and not self._processing:
         #    self._processing = True
         #    self._gen_html()
@@ -128,6 +133,7 @@ class ESphinxModel(object):
     
     def update_rest(self, rest):
         self._rest = rest
+        self._rest_changed()
         self._queue_html()
     
     def get_html(self):
@@ -135,9 +141,12 @@ class ESphinxModel(object):
     
     def get_warnreport(self):
         return self._warnreport
+    
+    def get_filetree(self):
+        return self._filetree
 
     def _rest_changed(self):
-        self.dirty = True
+        self._dirty = True
 
     def _queue_html(self):
         if self._processing:
@@ -192,17 +201,34 @@ class ESphinxModel(object):
         else:
             return (True, '')
 
-    def save(self):
-        """ Save both the reST and HTML file.
-        """
-        self.dirty = False
-
-        fh = codecs.open(self.filepath, 'w', 'utf-8')
-        fh.write(self.rest)
+    def replace(self, filename):
+        if self._dirty:
+            if not self.save():
+                print "Not saved, cancelling load"
+        self.load(filename)
+            
+    def load(self, filename):
+        """Load reST from a file"""
+        fh = codecs.open(filename, 'r', 'utf-8')
+        rest = fh.read()
         fh.close()
+        self._filepath = filename
+        self._dirty = False
+        for view in self._views:
+            view.set_rest(rest)
+        return True
 
-        if self.save_html:
-            fh = codecs.open(self.html_filepath, 'w', 'utf-8')
-            fh.write(self.html)
-            fh.close()
-
+    def save(self):
+        """ Save reST to a file"""
+        print "SAVE?"
+        if not self._filepath:
+            path = QtGui.QFileDialog.getSaveFileName(filter='ReST (*.rst)')
+            if not path:
+                return False
+            self._filepath = path
+        print "Save as %s" % unicode(self._filepath)
+        fh = codecs.open(self._filepath, 'w', 'utf-8')
+        fh.write(self._rest)
+        fh.close()
+        self._dirty = False
+        return True

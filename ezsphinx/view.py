@@ -2,7 +2,7 @@
 from PyQt4 import QtCore, QtGui, QtWebKit
 from ConfigParser import SafeConfigParser as ConfigParser
 from gui import Ui_MainWindow
-import binascii
+from binascii import hexlify, unhexlify
 import os
 import tempfile
 import time 
@@ -63,36 +63,50 @@ class ESphinxView(QtGui.QMainWindow):
     def __init__(self, parent=None):
         QtGui.QWidget.__init__(self, parent)
         self._model = None
-        self._ui = Ui_MainWindow()
-        self._ui.setupUi(self)
+        ui = Ui_MainWindow()
+        self._ui = ui
+        ui.setupUi(self)
         #self.watcher = QtCore.QFileSystemWatcher(self)
         #QtCore.QObject.connect(self.ui.button_open,QtCore.SIGNAL("clicked()"), self.file_dialog)
         #QtCore.QObject.connect(self.ui.button_save,QtCore.SIGNAL("clicked()"), self.file_save)
         #QtCore.QObject.connect(self.ui.editor_window,QtCore.SIGNAL("textChanged()"), self.enable_save)
         #QtCore.QObject.connect(self.watcher,QtCore.SIGNAL("fileChanged(const QString&)"), self.file_changed)
         #self.filename = False
-        self._ui.textedit.textChanged.connect(self._textedit_update)
-        self._ui.textedit.blockCountChanged.connect(self._blockcount_update)
+        ui.textedit.textChanged.connect(self._textedit_update)
+        ui.textedit.blockCountChanged.connect(self._blockcount_update)
         QtCore.QObject.connect(self, QtCore.SIGNAL("_reload()"), self._reload)
         self._lock = threading.Lock()
         self._docs = []
 
-        self._ui.webview.setTextSizeMultiplier(0.8)
-        self._ui.hlayout.setContentsMargins(4,4,4,0)
-        self._ui.vlayout.setContentsMargins(4,0,4,0)
-        self._ui.textlayout.setContentsMargins(0,0,2,0)
-        self._ui.weblayout.setContentsMargins(2,0,2,2)
-        self._ui.tablelayout.setContentsMargins(4,0,4,0)
+        ui.webview.setTextSizeMultiplier(0.8)
+        ui.ftlayout.setContentsMargins(0,4,1,0)
+        ui.elayout.setContentsMargins(1,4,1,0)
+        ui.vlayout.setContentsMargins(4,0,4,0)
+        ui.textlayout.setContentsMargins(0,0,2,0)
+        ui.weblayout.setContentsMargins(1,0,2,2)
+        ui.tablelayout.setContentsMargins(1,0,2,0)
         self._warnreportview = WarningReportView(self)
-        self._ui.tablelayout.addWidget(self._warnreportview)
-        self._ui.menubar.setNativeMenuBar(True)
-        # file_menu = self._ui.menubar.addMenu(self.tr("&File"));
-        
+        ui.tablelayout.addWidget(self._warnreportview)
+        ui.menubar.setNativeMenuBar(True)
+        # file_menu = ui.menubar.addMenu(self.tr("&File"));
+
+        filetree = ui.filetree
+        filetree.setSortingEnabled(True)
+        #self.tree.hideColumn(1)
+        filetree.setColumnWidth(0, 50)
+        # ui.filetree.show()
+        font = filetree.font()
+        font.setPointSize(10)
+        filetree.setFont(font)
+        filetree.setHeaderHidden(True)
+        filetree.clicked.connect(self._select_file)
+
         keyseq = QtGui.QKeySequence("Ctrl+T")
-        shortcut = QtGui.QShortcut(keyseq, self._ui.textedit)
+        shortcut = QtGui.QShortcut(keyseq, ui.textedit)
         self.connect(shortcut, QtCore.SIGNAL('activated()'), self._choose_font)
-        self._ui.hsplitter.splitterMoved.connect(self._splitter_update)
-        self._ui.vsplitter.splitterMoved.connect(self._splitter_update)
+        ui.hsplitter.splitterMoved.connect(self._splitter_update)
+        ui.vsplitter.splitterMoved.connect(self._splitter_update)
+        ui.fsplitter.splitterMoved.connect(self._splitter_update)
         
         self._formats = {}
         self._last_text_len = 0
@@ -107,7 +121,12 @@ class ESphinxView(QtGui.QMainWindow):
         """assign the model that backs up the view"""
         self._model = model
         self._warnreportview.setModel(model.get_warnreport())
-    
+        self._ui.filetree.setModel(model.get_filetree())
+        for col in xrange(1, model.get_filetree().columnCount()):
+            self._ui.filetree.setColumnHidden(col, True)
+        index = model.get_filetree().index(os.path.expanduser('~'))
+        self._ui.filetree.setRootIndex(index)
+
     def set_focus_textedit(self):
         """set the focus back to the textedit to resume editing"""
         self._ui.textedit.activateWindow()
@@ -145,6 +164,9 @@ class ESphinxView(QtGui.QMainWindow):
                             QtGui.QTextCursor.MoveAnchor, line-1)
         textedit.setTextCursor(cursor)
     
+    def set_rest(self, rest):
+        self._ui.textedit.setPlainText(QtCore.QString(rest))
+        
     #-------------------------------------------------------------------------
     # Signal handlers (slots)
     #-------------------------------------------------------------------------
@@ -175,6 +197,11 @@ class ESphinxView(QtGui.QMainWindow):
         """^: a splitter has been moved"""
         self._ui_change_timer.stop()
         self._ui_change_timer.start(1000)
+        
+    def _select_file(self, index):
+        path = self._ui.filetree.model().filePath(index)
+        if os.path.isfile(path):
+            self._model.replace(path)
 
     def _reload(self):
         """^: internal handler to refresh the textedit content asynchronously"""
@@ -218,10 +245,14 @@ class ESphinxView(QtGui.QMainWindow):
 
     def _set_line_background(self, line, level):
         """does the actual line background colorization"""
+        textedit = self._ui.textedit
+        if line > textedit.blockCount():
+            # this may happen when the last error line is the last line in
+            # the text edit widget
+            return
         if not self._formats:
             self._generate_formats()
         line = line-1
-        textedit = self._ui.textedit
         cursor = textedit.textCursor()
         cline = cursor.blockNumber()
         delta = line-cline
@@ -256,38 +287,29 @@ class ESphinxView(QtGui.QMainWindow):
     def _load_preferences(self):
         """reload previously saved UI configuration from a file"""
         # could use a QSetting object, but the API is just boring
-        home = os.environ['HOME']
-        prefs = os.path.join(home, '.ezsphinxrc')
         config = EasyConfigParser()
-        if not config.read(prefs):
+        if not config.read(os.path.expanduser('~/.ezsphinxrc')):
             return
         font = config.get('textedit', 'font')
         if font:
             qtfont = QtGui.QFont()
             if qtfont.fromString(font):
                 self._ui.textedit.setFont(qtfont)
-        hsplitter = config.get('main', 'hsplitter')
-        if hsplitter:
-            data = binascii.unhexlify(hsplitter)
-            self._ui.hsplitter.restoreState(data)
-        vsplitter = config.get('main', 'vsplitter')
-        if vsplitter:
-            data = binascii.unhexlify(vsplitter)
-            self._ui.vsplitter.restoreState(data)
+        for splitter in ('hsplitter', 'vsplitter', 'fsplitter'):
+            sp = config.get('main', splitter)
+            if sp:
+                getattr(self._ui, splitter).restoreState(unhexlify(sp))
 
     def _save_preferences(self):
         """save current UI configuration into a configuration file"""
         # could use a QSetting object, but the API is just boring
-        home = os.environ['HOME']
-        if not home:
-            return
         config = EasyConfigParser()
         font = self._ui.textedit.font().toString()
         config.set('textedit', 'font', font)
-        data = self._ui.hsplitter.saveState()
-        config.set('main', 'hsplitter', binascii.hexlify(data))
-        data = self._ui.vsplitter.saveState()
-        config.set('main', 'vsplitter', binascii.hexlify(data))
-        prefs = os.path.join(home, '.ezsphinxrc')
-        with open(prefs, 'w') as out_:
+
+        for splitter in ('hsplitter', 'vsplitter', 'fsplitter'):
+            data = hexlify(getattr(self._ui, splitter).saveState())
+            config.set('main', splitter, data)
+        
+        with open(os.path.expanduser('~/.ezsphinxrc'), 'w') as out_:
             config.write(out_)
