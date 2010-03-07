@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-from PyQt4.QtCore import SIGNAL
 from PyQt4.QtGui import QApplication
 from controller import EzSphinxController
 import sys
@@ -11,7 +10,7 @@ class EzSphinxApp(QApplication):
     
     def __init__(self, argv):
         QApplication.__init__(self, argv)
-        self.connect(self, SIGNAL('aboutToQuit()'), self._quit)
+        self.aboutToQuit.connect(self._quit)
 
     def run(self):
         self._controller = EzSphinxController(self)

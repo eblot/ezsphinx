@@ -1,6 +1,5 @@
-from PyQt4.QtCore import SIGNAL
 from PyQt4.QtGui import QApplication, QColor, QFileDialog, QFont, \
-                        QKeySequence, QPlainTextEdit, QShortcut, \
+                        QFontDialog, QKeySequence, QPlainTextEdit, QShortcut, \
                         QTextBlockFormat, QTextCursor
 import codecs
 
@@ -17,7 +16,7 @@ class EzSphinxTextEdit(QPlainTextEdit):
         self.blockCountChanged.connect(self._blockcount_update)
         shortcut = QShortcut(QKeySequence("Ctrl+T"), self)
         self._doc = QApplication.instance().controller().rest
-        self.connect(shortcut, SIGNAL('activated()'), self._choose_font)
+        shortcut.activated.connect(self._choose_font)
         self._last_warnings = {} # should be moved to the document
 
     def select_line(self, line):
@@ -184,13 +183,11 @@ class EzSphinxRestModel(object):
 
     def save(self):
         """ Save reST to a file"""
-        print "SAVE?"
         if not self._filepath:
             path = QFileDialog.getSaveFileName(filter='ReST (*.rst)')
             if not path:
                 return False
             self._filepath = path
-        print "Save as %s" % unicode(self._filepath)
         fh = codecs.open(self._filepath, 'w', 'utf-8')
         fh.write(self.text)
         fh.close()

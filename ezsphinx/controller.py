@@ -20,7 +20,7 @@ import os
 import util
 from threading import Lock
 from multiprocessing import Pool
-from PyQt4.QtCore import QObject, SIGNAL
+from PyQt4.QtCore import QObject, pyqtSignal
 
 from textedit import EzSphinxRestModel
 from warnreport import EzSphinxWarnReportModel
@@ -36,6 +36,8 @@ def sphinx_rest_to_html(rest, static_path=util.DEFAULT_STATIC_PATH):
 class EzSphinxController(QObject):
     """Controller for the application"""
     
+    postUpdate = pyqtSignal()
+    
     def __init__(self, parent):
         QObject.__init__(self, parent)
         self._rstsrc = ''
@@ -49,7 +51,7 @@ class EzSphinxController(QObject):
         self._pool = Pool(processes=1)
         self._lock = Lock()
         self._html_docs = []
-        QObject.connect(self, SIGNAL("_do_update()"), self._do_update)
+        self.postUpdate.connect(self._do_update)
 
     @property
     def warnreport(self):
@@ -124,7 +126,7 @@ class EzSphinxController(QObject):
             self._lock.acquire()
             self._html_docs.append(html)
             self._lock.release()
-            self.emit(SIGNAL('_do_update()'))
+            self.postUpdate.emit()
 
     #-------------------------------------------------------------------------
     # Signal handlers (slots)
