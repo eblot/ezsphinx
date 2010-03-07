@@ -5,16 +5,21 @@ EzSphinx
 Overview
 --------
 
-EzSphinx_ aims at providing an interactive GUI editor to write reStructuredText_ and Sphinx_ documents and get near real-time WYSIWYG rendering.
+EzSphinx_ aims at providing an interactive GUI editor to write 
+reStructuredText_ and Sphinx_ documents and get near real-time WYSIWYG 
+rendering.
 
-For now, neither RestructuredText_ stylesheets nor Sphinx_ documents are actually supported.
+For now, neither RestructuredText_ stylesheets nor actual Sphinx_ documents are 
+actually supported.
 
 Status
 ------
 
-EzSphinx_ is a project in a very early stage of development. It should be seen as a proof of concept, not as a ready-to-use editor.
+EzSphinx_ is a project in a very early stage of development. It should be seen 
+as a proof of concept, not as a ready-to-use editor.
 
-Do not edit original documents: always copy them first before browsing and editing them within EzSphinx_. You'll be warned.
+Never edit original documents: always **copy them first** before browsing and 
+editing them within EzSphinx_. You've been warned.
 
 Requirements
 ------------
@@ -35,6 +40,8 @@ Thanks
 
 EzSphinx has been initially based on the Enthought_ ReST editor.
 
-It is loosely coupled with the original fork, as one of the major goal of EzSphinx_ is to keep the list of dependencies as small as possible. There is no dependency on Enthought_ libraries.
+It is loosely coupled with the original fork, as one of the major goal of 
+EzSphinx_ is to keep the list of dependencies as small as possible. There is no
+dependency on Enthought_ libraries.
 
 .. _Enthought: http://www.enthought.com/
