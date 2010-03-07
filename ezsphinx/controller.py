@@ -33,7 +33,7 @@ def sphinx_rest_to_html(rest, static_path=util.DEFAULT_STATIC_PATH):
 
 
 class EzSphinxController(QObject):
-    """Main controller"""
+    """Controller for the application"""
     
     def __init__(self, parent):
         QObject.__init__(self, parent)

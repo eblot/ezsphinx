@@ -1,13 +1,13 @@
+from PyQt4.QtCore import QAbstractTableModel, QDir, Qt, QVariant
+from PyQt4.QtGui import QApplication, QDirModel, QFileDialog
 import codecs
 import os
 import util
-from PyQt4.QtCore import QAbstractTableModel, QDir, Qt, QVariant
-from PyQt4.QtGui import QApplication, QDirModel, QFileDialog
 
 
 class WarningReportModel(QAbstractTableModel):
-    """
-    """
+    """Track the warnings within a ReST document"""
+    
     columns = ('Line', 'Level', 'Description')
     levels = ('Debug', 'Info', 'Warning', 'Error', 'Severe')
     

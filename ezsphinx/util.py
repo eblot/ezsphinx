@@ -15,25 +15,20 @@
 #
 #------------------------------------------------------------------------------
 
-""" Defines function for converting reStructured Text to HTML.
-"""
 
-# Standard library imports
-import codecs
-import os.path
-import re
 from shutil import rmtree
 from StringIO import StringIO
 from tempfile import mkdtemp
-
-# System library imports
-import docutils.io, docutils.nodes
 from docutils.core import Publisher
 from docutils.parsers.rst.roles import _roles as docutils_roles
 try:
     from sphinx.application import Sphinx
 except ImportError:
     Sphinx = None
+import codecs
+import docutils.io, docutils.nodes
+import os.path
+import re
 
 
 #------------------------------------------------------------------------------
@@ -159,7 +154,7 @@ def sphinx_rest_to_html(rest, static_path=DEFAULT_STATIC_PATH):
 from ConfigParser import SafeConfigParser as ConfigParser
 
 class EasyConfigParser(ConfigParser):
-    """Simplify defaut configuration"""
+    """Configuration parser that tolerate missing sections and items"""
     
     def get(self, section, option, default=None):
         if not self.has_section(section):

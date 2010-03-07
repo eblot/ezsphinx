@@ -1,9 +1,10 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
-import sys
+
 from PyQt4.QtCore import SIGNAL
 from PyQt4.QtGui import QApplication
 from controller import EzSphinxController
+import sys
+
 
 class EzSphinxApp(QApplication):
     """EzSphinx application"""
