@@ -1,15 +1,13 @@
-from PyQt4.QtCore import QFileSystemWatcher, QMetaObject, QObject, QRect, \
-                         Qt, QTimer, QUrl, SIGNAL
-from PyQt4.QtGui import QAbstractItemView, QApplication, QColor, \
-                        QFont, QFontDialog, QHBoxLayout, QKeySequence, \
-                        QMainWindow, QMenuBar, QPlainTextEdit, QShortcut, \
-                        QSplitter, QStatusBar, QTableView, QTextBlockFormat, \
-                        QTextCursor, QTreeView, QVBoxLayout, QWidget
-from PyQt4.QtWebKit import QWebView
-from binascii import hexlify, unhexlify
+from PyQt4.QtCore import QMetaObject, QRect, Qt 
+from PyQt4.QtGui import QApplication, QHBoxLayout, QMainWindow, QMenuBar, \
+                        QStatusBar, QVBoxLayout, QWidget
+from filetree import EzSphinxTreeView
+from splitter import EzSphinxSplitter
+from textedit import EzSphinxTextEdit
 from util import EasyConfigParser
+from warnreport import EzSphinxWarnReportView
+from web import EzSphinxWebView
 import os
-import time 
 
 
 class EzSphinxMenuBar(QMenuBar):
@@ -115,7 +113,7 @@ class EzSphinxWindow(QMainWindow):
         tablelayout.setContentsMargins(1,0,2,0)
         vlayout.addWidget(vsplitter)
         flayout.addWidget(fsplitter)
-        warnreport = WarningReportView(self)
+        warnreport = EzSphinxWarnReportView(self)
         tablelayout.addWidget(warnreport)
         self.setCentralWidget(mainwidget)
         self.setMenuBar(EzSphinxMenuBar(self))

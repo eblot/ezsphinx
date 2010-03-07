@@ -1,4 +1,8 @@
-class WarningReportView(QTableView):
+from PyQt4.QtCore import QAbstractTableModel, Qt, QVariant
+from PyQt4.QtGui import QAbstractItemView, QApplication, QFont, QTableView
+
+
+class EzSphinxWarnReportView(QTableView):
     """Report the warnings and errors within a table"""
 
     def __init__(self, view): 
@@ -29,7 +33,7 @@ class WarningReportView(QTableView):
         self.resizeRowsToContents()
 
 
-class WarningReportModel(QAbstractTableModel):
+class EzSphinxWarnReportModel(QAbstractTableModel):
     """Track the warnings within a ReST document"""
     
     columns = ('Line', 'Level', 'Description')

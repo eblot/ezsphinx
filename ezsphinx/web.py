@@ -1,3 +1,7 @@
+from PyQt4.QtCore import QUrl
+from PyQt4.QtWebKit import QWebView
+
+
 class EzSphinxWebView(QWebView):
     """Web view to render Restructed Text"""
     
@@ -9,5 +13,3 @@ class EzSphinxWebView(QWebView):
     
     def refresh(self, html):
         self.setHtml(html)
-
-

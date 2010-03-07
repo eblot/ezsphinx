@@ -1,3 +1,7 @@
+from PyQt4.QtCore import QTimer
+from PyQt4.QtGui import QSplitter
+from binascii import hexlify, unhexlify
+
 class EzSphinxSplitter(QSplitter):
     """A splitter that backs up its presentation"""
     

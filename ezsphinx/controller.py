@@ -15,7 +15,6 @@
 #
 #-----------------------------------------------------------------------------
 
-# Standard library imports
 import codecs
 import os
 import util
@@ -23,8 +22,10 @@ from threading import Lock
 from multiprocessing import Pool
 from PyQt4.QtCore import QObject, SIGNAL
 
-from model import EzSphinxRestModel, WarningReportModel, FileTreeModel
-from view import EzSphinxWindow
+from textedit import EzSphinxRestModel
+from warnreport import EzSphinxWarnReportModel
+from filetree import EzSphinxFileTreeModel
+from main import EzSphinxWindow
 
 def docutils_rest_to_html(rest):
     return util.docutils_rest_to_html(rest)
@@ -64,8 +65,8 @@ class EzSphinxController(QObject):
     
     def run(self):
         self._rest = EzSphinxRestModel()
-        self._warnreport = WarningReportModel()
-        self._filetree = FileTreeModel()
+        self._warnreport = EzSphinxWarnReportModel()
+        self._filetree = EzSphinxFileTreeModel()
         self._window = EzSphinxWindow()
         self._window.show()
 
@@ -130,7 +131,7 @@ class EzSphinxController(QObject):
     #-------------------------------------------------------------------------
 
     def _do_update(self):
-        """^: internal handler to refresh the textedit content asynchronously"""
+        """^: internal handler to refresh views asynchronously"""
         self._lock.acquire()
         html = self._html_docs.pop(0)
         self._lock.release()

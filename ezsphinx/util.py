@@ -15,12 +15,11 @@
 #
 #------------------------------------------------------------------------------
 
-
+from docutils.core import Publisher
+from docutils.parsers.rst.roles import _roles as docutils_roles
 from shutil import rmtree
 from StringIO import StringIO
 from tempfile import mkdtemp
-from docutils.core import Publisher
-from docutils.parsers.rst.roles import _roles as docutils_roles
 try:
     from sphinx.application import Sphinx
 except ImportError:

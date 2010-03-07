@@ -1,3 +1,8 @@
+from PyQt4.QtCore import QDir
+from PyQt4.QtGui import QApplication, QDirModel, QTreeView
+import os
+
+
 class EzSphinxTreeView(QTreeView):
     """File tree view"""
     
@@ -23,7 +28,7 @@ class EzSphinxTreeView(QTreeView):
             QApplication.instance().controller().load_file(path)
 
 
-class FileTreeModel(QDirModel):
+class EzSphinxFileTreeModel(QDirModel):
     """File tree browser"""
 
     def __init__(self):

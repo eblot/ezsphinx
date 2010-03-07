@@ -1,3 +1,10 @@
+from PyQt4.QtCore import SIGNAL
+from PyQt4.QtGui import QApplication, QColor, QFileDialog, QFont, \
+                        QKeySequence, QPlainTextEdit, QShortcut, \
+                        QTextBlockFormat, QTextCursor
+import codecs
+
+
 class EzSphinxTextEdit(QPlainTextEdit):
     """Source window for Restructured Text"""
     
