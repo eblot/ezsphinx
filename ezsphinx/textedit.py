@@ -15,8 +15,8 @@ class EzSphinxTextEdit(QPlainTextEdit):
         self.textChanged.connect(self._textedit_update)
         self.blockCountChanged.connect(self._blockcount_update)
         shortcut = QShortcut(QKeySequence("Ctrl+T"), self)
-        self._doc = QApplication.instance().controller().rest
         shortcut.activated.connect(self._choose_font)
+        self._doc = QApplication.instance().controller().rest
         self._last_warnings = {} # should be moved to the document
 
     def select_line(self, line):

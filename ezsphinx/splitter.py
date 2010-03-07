@@ -36,5 +36,3 @@ class EzSphinxSplitter(QSplitter):
         data = hexlify(self.saveState())
         config = {'main' : [(str(self.objectName().toUtf8()), data)]}
         self.mainwin.save_presentation(config)
-
-

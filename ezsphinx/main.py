@@ -104,7 +104,7 @@ class EzSphinxWindow(QMainWindow):
         weblayout = QHBoxLayout(webwidget)
         weblayout.setObjectName("weblayout")
         weblayout.setContentsMargins(1,0,2,2)
-        webview = EzSphinxWebView(webwidget)
+        webview = EzSphinxWebView(webwidget, self)
         weblayout.addWidget(webview)
         tablewidget = QWidget(vsplitter)
         tablewidget.setObjectName("tablewidget")
