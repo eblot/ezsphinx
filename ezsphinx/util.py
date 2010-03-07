@@ -150,3 +150,27 @@ def sphinx_rest_to_html(rest, static_path=DEFAULT_STATIC_PATH):
     html = re.sub(STATIC_REGEX, replace, html)
 
     return html, warning_nodes
+
+
+#-----------------------------------------------------------------------------
+# Not from Enthought
+#-----------------------------------------------------------------------------
+
+from ConfigParser import SafeConfigParser as ConfigParser
+
+class EasyConfigParser(ConfigParser):
+    """Simplify defaut configuration"""
+    
+    def get(self, section, option, default=None):
+        if not self.has_section(section):
+            return default
+        if not self.has_option(section, option):
+            return default
+        return ConfigParser.get(self, section, option)
+
+    def set(self, section, option, value):
+        if not self.has_section(section):
+            self.add_section(section)
+        ConfigParser.set(self, section, option, str(value))
+
+

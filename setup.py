@@ -18,7 +18,7 @@ from setuptools import setup, find_packages
 
 setup(
     name = 'ezSphinx',
-    version = '0.1.2',
+    version = '0.1.3',
     description = 'Interactive editor for Rst and Sphinx documentation tools',
     author = 'Emmanuel Blot',
     author_email = 'emmanuel.blot@free.fr',

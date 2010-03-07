@@ -1,33 +1,15 @@
 from PyQt4.QtCore import QFileSystemWatcher, QMetaObject, QObject, QRect, \
                          Qt, QTimer, QUrl, SIGNAL
-from PyQt4.QtGui import QAbstractItemView, \
-                        QColor, QFontDialog, QHBoxLayout, QKeySequence, \
+from PyQt4.QtGui import QAbstractItemView, QApplication, QColor, \
+                        QFont, QFontDialog, QHBoxLayout, QKeySequence, \
                         QMainWindow, QMenuBar, QPlainTextEdit, QShortcut, \
                         QSplitter, QStatusBar, QTableView, QTextBlockFormat, \
                         QTextCursor, QTreeView, QVBoxLayout, QWidget
 from PyQt4.QtWebKit import QWebView
-
-from ConfigParser import SafeConfigParser as ConfigParser
 from binascii import hexlify, unhexlify
+from util import EasyConfigParser
 import os
-import tempfile
 import time 
-import threading
-
-class EasyConfigParser(ConfigParser):
-    """Simplify defaut configuration"""
-    
-    def get(self, section, option, default=None):
-        if not self.has_section(section):
-            return default
-        if not self.has_option(section, option):
-            return default
-        return ConfigParser.get(self, section, option)
-
-    def set(self, section, option, value):
-        if not self.has_section(section):
-            self.add_section(section)
-        ConfigParser.set(self, section, option, str(value))
 
 
 class EzSphinxMenuBar(QMenuBar):
@@ -41,6 +23,7 @@ class EzSphinxMenuBar(QMenuBar):
         self.setNativeMenuBar(True)
         # file_menu = self.addMenu(self.tr("&File"));
 
+
 class EzSphinxStatusBar(QStatusBar):
     """Status bar of the main window"""
 
@@ -52,14 +35,19 @@ class EzSphinxStatusBar(QStatusBar):
 class EzSphinxTextEdit(QPlainTextEdit):
     """Source window for Restructured Text"""
     
-    def __init__(self, parent):
+    def __init__(self, parent, mainwin):
         QPlainTextEdit.__init__(self, parent)
+        self.mainwin = mainwin
         self.setObjectName("textedit")
         self._formats = {}
         self.textChanged.connect(self._textedit_update)
         self.blockCountChanged.connect(self._blockcount_update)
+        shortcut = QShortcut(QKeySequence("Ctrl+T"), self)
+        self._doc = QApplication.instance().controller().rest
+        self.connect(shortcut, SIGNAL('activated()'), self._choose_font)
         
-        self._last_warnings = 0 # should be moved into the document
+        self._last_text_len = 0 # should be moved into the document
+        self._last_warnings = {} # should be moved into the document
 
     def select_line(self, line):
         """Move the edit cursor to the selected line"""
@@ -77,15 +65,18 @@ class EzSphinxTextEdit(QPlainTextEdit):
         self.setPlainText(QtCore.QString(rest))
 
     def refresh(self):
-        super(EzSphinxTextEdit, self).refresh()
         self._update_background()
+    
+    def update_text(self):
+        self.setPlainText(self._doc.text)
 
     def load_presentation(self, config):
-        font = config.get('textedit', 'font')
-        if font:
-            qtfont = QFont()
-            if qtfont.fromString(font):
-                self.setFont(qtfont)
+        if 'textedit' in config:
+            for key, value in config['textedit']:
+                if key == 'font':
+                    qtfont = QFont()
+                    if qtfont.fromString(value):
+                        self.setFont(qtfont)
         
     @staticmethod
     def differentiate(old, new):
@@ -102,9 +93,32 @@ class EzSphinxTextEdit(QPlainTextEdit):
             dwarn[s] = 0
         return dwarn
 
+    #-------------------------------------------------------------------------
+    # Signal handlers (slots)
+    #-------------------------------------------------------------------------
+
+    def _textedit_update(self):
+        """^: something in the textedit widget has been updated"""
+        # Ok, so textChanged is stupid, as it gets signalled when *text*
+        # is not changed but formatting is. So we need to discriminate from
+        # both kind of calls...
+        text = self.toPlainText()
+        print "_textedit_update move to model"
+        if len(text) != self._last_text_len:
+            self._last_text_len = len(text)
+            QApplication.instance().controller().update_rest(text)
+    
+    def _blockcount_update(self, newcount):
+        """^: a new line has been added or an existing line got removed"""
+        self._update_line()
+
+    #-------------------------------------------------------------------------
+    # Private implementation
+    #-------------------------------------------------------------------------
+
     def _update_background(self):
         """update the background color of all lines that contain errors"""
-        lines = self._model.get_warnreport().get_lines()
+        lines = QApplication.instance().controller().warnreport.get_lines()
         warnings = self.differentiate(self._last_warnings, lines) 
         self._last_warnings = lines
         for line in sorted(warnings):
@@ -152,7 +166,7 @@ class EzSphinxTextEdit(QPlainTextEdit):
         if ok:
             self.setFont(font)
             config = {'textedit' : [('font', font.toString())]}
-            self.parent.save_presentation(config)
+            self.mainwin.save_presentation(config)
 
     def _generate_formats(self):
         """generate background colors for textedit warnings"""
@@ -177,6 +191,9 @@ class EzSphinxWebView(QWebView):
         self.setUrl(QUrl("about:blank"))
         self.setObjectName("webview")
         self.setTextSizeMultiplier(0.8)
+    
+    def refresh(self, html):
+        self.setHtml(html)
 
 
 class WarningReportView(QTableView):
@@ -185,6 +202,7 @@ class WarningReportView(QTableView):
     def __init__(self, view): 
         QTableView.__init__(self) 
         self._parentview = view
+        self.setObjectName("warnreport")
         font = QFont()
         font.setPointSize(10)
         self.setFont(font)
@@ -196,6 +214,7 @@ class WarningReportView(QTableView):
         header.setStretchLastSection(True)
         self.setSelectionMode(QAbstractItemView.SingleSelection)
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.setModel(QApplication.instance().controller().warnreport)
 
     def currentChanged(self, current, previous):
         row = current.row()
@@ -220,20 +239,25 @@ class EzSphinxTreeView(QTreeView):
         font.setPointSize(10)
         self.setFont(font)
         self.setHeaderHidden(True)
-        filetree.clicked.connect(self._select_file)
+        self.setModel(QApplication.instance().controller().filetree)
+        for col in xrange(1, self.model().columnCount()):
+            self.setColumnHidden(col, True)
+        self.setRootIndex(self.model().index(os.path.expanduser('~')))
+        self.clicked.connect(self._select_file)
     
     def _select_file(self, index):
         """^: invoked when a file or a directory is selected"""
         path = self.model().filePath(index)
         if os.path.isfile(path):
-            self._model.replace(path)
+            QApplication.instance().controller().load_file(path)
 
 
 class EzSphinxSplitter(QSplitter):
     """A splitter that backs up its presentation"""
     
-    def __init__.(self, parent, name, orientation):
+    def __init__(self, parent, mainwin, name, orientation):
         QSplitter.__init__(self, parent)
+        self.mainwin = mainwin
         self.setOrientation(orientation)
         self.setHandleWidth(7)
         self.setObjectName(name)
@@ -259,9 +283,9 @@ class EzSphinxSplitter(QSplitter):
 
     def _timer_exhaust(self):
         """^: timer-filtered event handler for rapid changing UI mods"""
-        data = hexlify(splitter.saveState())
-        config = {'main' : [(str(splitter.objectName().toUtf8()), data)]}
-        self.parent.save_presentation(config)
+        data = hexlify(self.saveState())
+        config = {'main' : [(str(self.objectName().toUtf8()), data)]}
+        self.mainwin.save_presentation(config)
 
 
 class EzSphinxWindow(QMainWindow):
@@ -275,57 +299,71 @@ class EzSphinxWindow(QMainWindow):
         QMetaObject.connectSlotsByName(self)
         self.config = EasyConfigParser()
         self._setup_ui()
-        
-        keyseq = QKeySequence("Ctrl+T")
-        shortcut = QShortcut(keyseq, ui.textedit)
-        self.connect(shortcut, SIGNAL('activated()'), self._choose_font)
+        # load last user settings
+        self._load_preferences()
     
     def save_presentation(self, config):
         self._save_preferences(config)
     
+    def select_warning(self, line):
+        self.widgets['textedit'].select_line(line)
+        self.widgets['textedit'].set_focus()
+
+    def render(self, html=''):
+        self.widgets['webview'].refresh(html) # a document would be better
+        self.widgets['warnreport'].refresh()
+        self.widgets['textedit'].refresh()
+    
+    def update_rest(self):
+        self.widgets['textedit'].update_text()
+
     #-------------------------------------------------------------------------
     # Private implementation
     #-------------------------------------------------------------------------
 
     def _setup_ui(self):
+        self.widgets = {}
         mainwidget = QWidget(self)
         mainwidget.setMouseTracking(True)
         mainwidget.setObjectName("mainwidget")
         flayout = QHBoxLayout(mainwidget)
         flayout.setObjectName("flayout")
-        fsplitter = EzSphinxSplitter(mainwidget, 'fsplitter', Qt.Horizontal)
+        fsplitter = EzSphinxSplitter(mainwidget, self, 'fsplitter', 
+                                     Qt.Horizontal)
         ftwidget = QWidget(fsplitter)
         ftwidget.setObjectName("ftwidget")
         ftlayout = QVBoxLayout(ftwidget)
         ftlayout.setObjectName("ftlayout")
         ftlayout.setContentsMargins(0,4,1,0)
-        self.filetree = EzSphinxTreeView(ftwidget)
+        filetree = EzSphinxTreeView(ftwidget)
         ftlayout.addWidget(filetree)
         vlayout = QVBoxLayout(fsplitter)
         vlayout.setObjectName("vlayout")
         vlayout.setContentsMargins(4,0,4,0)
-        vsplitter = EzSphinxSplitter(fsplitter, 'vsplitter', Qt.Vertical)
+        vsplitter = EzSphinxSplitter(fsplitter, self, 'vsplitter', 
+                                     Qt.Vertical)
         editwidget = QWidget(vsplitter)
         editwidget.setObjectName("editwidget")
         elayout = QVBoxLayout(editwidget)
         elayout.setObjectName("elayout")
         elayout.setContentsMargins(1,4,1,0)
-        hsplitter = EzSphinxSplitter(editwidget, 'hsplitter', Qt.Horizontal)
+        hsplitter = EzSphinxSplitter(editwidget, self, 'hsplitter', 
+                                     Qt.Horizontal)
         elayout.addWidget(hsplitter)
         textwidget = QWidget(hsplitter)
         textwidget.setObjectName("textwidget")
         textlayout = QHBoxLayout(textwidget)
         textlayout.setObjectName("textlayout")
         textlayout.setContentsMargins(0,0,2,0)
-        self.textedit = EzSphinxTextEdit(textwidget)
-        textlayout.addWidget(self.textedit)
+        textedit = EzSphinxTextEdit(textwidget, self)
+        textlayout.addWidget(textedit)
         webwidget = QWidget(hsplitter)
         webwidget.setObjectName("webwidget")
         weblayout = QHBoxLayout(webwidget)
         weblayout.setObjectName("weblayout")
         weblayout.setContentsMargins(1,0,2,2)
-        self.webview = EzSphinxWebView(webwidget)
-        weblayout.addWidget(self.webview)
+        webview = EzSphinxWebView(webwidget)
+        weblayout.addWidget(webview)
         tablewidget = QWidget(vsplitter)
         tablewidget.setObjectName("tablewidget")
         tablelayout = QHBoxLayout(tablewidget)
@@ -333,106 +371,38 @@ class EzSphinxWindow(QMainWindow):
         tablelayout.setContentsMargins(1,0,2,0)
         vlayout.addWidget(vsplitter)
         flayout.addWidget(fsplitter)
-        self.warnreport = WarningReportView(self)
-        tablelayout.addWidget(self.warnreport)
+        warnreport = WarningReportView(self)
+        tablelayout.addWidget(warnreport)
         self.setCentralWidget(mainwidget)
         self.setMenuBar(EzSphinxMenuBar(self))
         self.setStatusBar(EzSphinxStatusBar(self))
+        self._add_widgets((hsplitter, vsplitter, fsplitter))
+        self._add_widgets((filetree, textedit, webview, warnreport))
+
+    def _add_widgets(self, widgets):
+        if not isinstance(widgets, tuple) and not isinstance(widgets, list):
+            widgets = (widgets,)
+        for widget in widgets:
+            name = str(widget.objectName().toUtf8())
+            self.widgets[name] = widget
         
     def _load_preferences(self):
         """reload previously saved UI configuration from a file"""
         if not self.config.read(os.path.expanduser('~/.ezsphinxrc')):
             return
+        config = {}
+        for section in self.config.sections():
+            for k, v in self.config.items(section):
+                config.setdefault(section, []).append((k.lower(), v)) 
+        for widget in self.widgets.values():
+            if hasattr(widget, 'load_presentation'):
+                widget.load_presentation(config)
 
     def _save_preferences(self, config={}):
         """save current UI configuration into a configuration file"""
         for section in config:
-            for key, value in section:
-                config.set(section, key, value)
+            for key, value in config[section]:
+                self.config.set(section, key, value)
 
         with open(os.path.expanduser('~/.ezsphinxrc'), 'w') as out_:
             self.config.write(out_)
-
-
-class ESphinxView(QWidget):
-    """
-    """
-    
-    def show(self):
-        self._ui.show()
-    
-    def __init__(self, parent=None):
-        QWidget.__init__(self, parent)
-        self._model = None
-        ui = EzSphinxWindow()
-        self._ui = ui
-        # ui.setupUi(self)
-        #self.watcher = QtCore.QFileSystemWatcher(self)
-        #QtCore.QObject.connect(self.ui.button_open,QtCore.SIGNAL("clicked()"), self.file_dialog)
-        #QtCore.QObject.connect(self.ui.button_save,QtCore.SIGNAL("clicked()"), self.file_save)
-        #QtCore.QObject.connect(self.ui.editor_window,QtCore.SIGNAL("textChanged()"), self.enable_save)
-        #QtCore.QObject.connect(self.watcher,QtCore.SIGNAL("fileChanged(const QString&)"), self.file_changed)
-        #self.filename = False
-        QObject.connect(self, SIGNAL("_reload()"), self._reload)
-        self._lock = threading.Lock()
-        self._docs = []
-
-        self._formats = {}
-        self._last_text_len = 0
-        self._last_warnings = {}
-        
-        # load last user settings
-        self._load_preferences()
-
-    def set_model(self, model):
-        """assign the model that backs up the view"""
-        self._model = model
-        self._ui._warnreport.setModel(model.get_warnreport())
-        self._ui.filetree.setModel(model.get_filetree())
-        for col in xrange(1, model.get_filetree().columnCount()):
-            self._ui.filetree.setColumnHidden(col, True)
-        index = model.get_filetree().index(os.path.expanduser('~'))
-        self._ui.filetree.setRootIndex(index)
-
-    def refresh(self):
-        """called from a worker thread, need to dispath the event with the
-           help of a slot/signal"""
-        self._lock.acquire()
-        self._docs.append(self._model.get_html())
-        self._lock.release()
-        self.emit(SIGNAL('_reload()'))
-
-    def set_rest(self, rest):
-        print "Should be called from document"
-        self.textedit.setPlainText(QtCore.QString(rest))
-    
-    def select_warning(self, line):
-        self.textedit.select_line(line)
-        self.textedit.set_focus()
-        
-    #-------------------------------------------------------------------------
-    # Signal handlers (slots)
-    #-------------------------------------------------------------------------
-
-    def _textedit_update(self):
-        """^: something in the textedit widget has been updated"""
-        # Ok, so textChanged is stupid, as it gets signalled when *text*
-        # is not changed but formatting is. So we need to discriminate from
-        # both kind of calls...
-        text = self._ui.textedit.toPlainText()
-        if len(text) != self._last_text_len:
-            self._last_text_len = len(text)
-            self._model.update_rest(text)
-    
-    def _blockcount_update(self, newcount):
-        """^: a new line has been added or an existing line got removed"""
-        self._update_line()
-
-    def _reload(self):
-        """^: internal handler to refresh the textedit content asynchronously"""
-        self._lock.acquire()
-        doc = self._docs.pop(0)
-        self._lock.release()
-        self._ui.webview.setHtml(doc)
-        self.warnreport.refresh()
-        self.textedit.refresh()

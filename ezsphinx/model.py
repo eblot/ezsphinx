@@ -1,41 +1,18 @@
-#-----------------------------------------------------------------------------
-#
-#  Copyright (c) 2009, Enthought, Inc.
-#  All rights reserved.
-# 
-#  This software is provided without warranty under the terms of the BSD
-#  license included in enthought/LICENSE.txt and may be redistributed only
-#  under the conditions described in the aforementioned license.  The license
-#  is also available online at http://www.enthought.com/licenses/BSD.txt
-#
-#  Thanks for using Enthought open source!
-#  
-#  Author: Evan Patterson
-#  Date:   06/18/2009
-#
-#-----------------------------------------------------------------------------
-
-# Standard library imports
 import codecs
 import os
 import util
-from multiprocessing import Pool
-from PyQt4 import QtCore, QtGui, QtWebKit
-
-def docutils_rest_to_html(rest):
-    return util.docutils_rest_to_html(rest)
-def sphinx_rest_to_html(rest, static_path=util.DEFAULT_STATIC_PATH):
-    return util.sphinx_rest_to_html(rest, static_path)
+from PyQt4.QtCore import QAbstractTableModel, QDir, Qt, QVariant
+from PyQt4.QtGui import QDirModel, QFileDialog
 
 
-class WarningReportModel(QtCore.QAbstractTableModel):
+class WarningReportModel(QAbstractTableModel):
     """
     """
     columns = ('Line', 'Level', 'Description')
     levels = ('Debug', 'Info', 'Warning', 'Error', 'Severe')
     
     def __init__(self, parent=None): 
-        QtCore.QAbstractTableModel.__init__(self, parent)
+        QAbstractTableModel.__init__(self, parent)
         self._warnings = []
     
     def rowCount(self, parent=None):
@@ -46,23 +23,23 @@ class WarningReportModel(QtCore.QAbstractTableModel):
     
     def data(self, index, role):
         if not index.isValid():
-            return QtCore.QVariant()
-        if role != QtCore.Qt.DisplayRole:
-            return QtCore.QVariant()
+            return QVariant()
+        if role != Qt.DisplayRole:
+            return QVariant()
         item = self._warnings[index.row()][index.column()]
         if index.column() == 1:
             item = self.levels[item]
-        return QtCore.QVariant(item)
+        return QVariant(item)
     
     def headerData(self, section, orientation, role):
-        if role != QtCore.Qt.DisplayRole:
-            return QtCore.QVariant()
-        if orientation != QtCore.Qt.Horizontal:
-            return QtCore.QVariant(int(section)+1)
-        return QtCore.QVariant(self.columns[section])
+        if role != Qt.DisplayRole:
+            return QVariant()
+        if orientation != Qt.Horizontal:
+            return QVariant(int(section)+1)
+        return QVariant(self.columns[section])
         
     def reset(self):
-        QtCore.QAbstractTableModel.reset(self)
+        QAbstractTableModel.reset(self)
         self._warnings = []
     
     def add(self, level=0, line=0, desc=''):
@@ -82,115 +59,21 @@ class WarningReportModel(QtCore.QAbstractTableModel):
         return lines
 
 
-class FileTreeModel(QtGui.QDirModel):
-    """File tree"""
+class FileTreeModel(QDirModel):
+    """File tree browser"""
 
     def __init__(self):
-        QtGui.QDirModel.__init__(self)
-        self.setFilter(QtCore.QDir.Dirs | 
-                       QtCore.QDir.NoDotAndDotDot |
-                       QtCore.QDir.Files)
+        QDirModel.__init__(self)
+        self.setFilter(QDir.Dirs | QDir.NoDotAndDotDot | QDir.Files)
 
 
-class ESphinxModel(object):
-    """
-    """
+class EzSphinxRestModel(object):
+    """Restructured text document"""
     
     def __init__(self, **kw):
+        self._text = ''
         self._dirty = False
-        self._rest = ''
-        self._html = ''
-        self._warnings = []
         self._filepath = ''
-        self.use_sphinx = False
-        self.sphinx_static_path = ''
-        self.save_html = False
-        self.html_filepath = ''
-        self._pool = None
-        self._processing = False
-        self._queued = False
-        self._pool = Pool(processes=1)
-        self._views = []
-        self._warnreport = WarningReportModel()
-        self._filetree = FileTreeModel()
-        #if self._html == '' and not self._processing:
-        #    self._processing = True
-        #    self._gen_html()
-
-    def quit(self):
-        # terminate the pool's subprocess on our own, so that we can catch
-        # any termination exception and discard it
-        try:
-            self._pool.terminate()
-        except OSError:
-            pass
-        self._pool.join()
-    
-    def add_view(self, view):
-        if view not in self._views:
-            self._views.append(view)
-            view.set_model(self)
-    
-    def update_rest(self, rest):
-        self._rest = rest
-        self._rest_changed()
-        self._queue_html()
-    
-    def get_html(self):
-        return self._html
-    
-    def get_warnreport(self):
-        return self._warnreport
-    
-    def get_filetree(self):
-        return self._filetree
-
-    def _rest_changed(self):
-        self._dirty = True
-
-    def _queue_html(self):
-        if self._processing:
-            self._queued = True
-        else:
-            self._processing = True
-            self._gen_html()
-            
-    def _gen_html(self):
-        args = [ self._rest ]
-        if self.use_sphinx:
-            func = sphinx_rest_to_html
-            if self.sphinx_static_path:
-                args.append(self.sphinx_static_path)
-        else:
-            func = docutils_rest_to_html
-        self._pool.apply_async(func, args, callback=self._set_html)
-
-    def _set_html(self, result):
-        if self._queued:
-            self._gen_html()
-            self._queued = False
-        else:
-            self._processing = False
-            self._html, warning_nodes = result[0].decode('utf-8'), result[1]
-            self._warnreport.reset()
-            for node in warning_nodes:
-                try:
-                    description = node.children[0].children[0] #.data
-                except AttributeError, e:
-                    print "Attribute Error: %s" % str(e)
-                    continue
-                self._warnreport.add(node.attributes['level'],
-                                     node.attributes['line'],
-                                     description)
-            for view in self._views:
-                view.refresh()
-
-    def _get_html_filepath(self):
-        filepath = self.filepath
-        index = filepath.rfind('.')
-        if index != -1:
-            filepath = filepath[:index]
-        return filepath + '.html'
 
     def validate(self):
         """ Prompt the user if there are warnings/errors with reST file.
@@ -205,30 +88,36 @@ class ESphinxModel(object):
         if self._dirty:
             if not self.save():
                 print "Not saved, cancelling load"
-        self.load(filename)
+        return self.load(filename)
             
     def load(self, filename):
         """Load reST from a file"""
         fh = codecs.open(filename, 'r', 'utf-8')
-        rest = fh.read()
+        self.text = fh.read()
         fh.close()
         self._filepath = filename
         self._dirty = False
-        for view in self._views:
-            view.set_rest(rest)
         return True
 
     def save(self):
         """ Save reST to a file"""
         print "SAVE?"
         if not self._filepath:
-            path = QtGui.QFileDialog.getSaveFileName(filter='ReST (*.rst)')
+            path = QFileDialog.getSaveFileName(filter='ReST (*.rst)')
             if not path:
                 return False
             self._filepath = path
         print "Save as %s" % unicode(self._filepath)
         fh = codecs.open(self._filepath, 'w', 'utf-8')
-        fh.write(self._rest)
+        fh.write(self.text)
         fh.close()
         self._dirty = False
         return True
+    
+    def _gettext(self):
+        return self._text
+    def _settext(self, text):
+        self._dirty = True
+        self._text = text
+    text = property(_gettext, _settext)
+

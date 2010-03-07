@@ -1,28 +1,28 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import sys
-from PyQt4 import QtCore, QtGui
-from view import ESphinxView, WarningReportView
-from model import ESphinxModel
+from PyQt4.QtCore import SIGNAL
+from PyQt4.QtGui import QApplication
+from controller import EzSphinxController
 
-class EzSphinxApp(QtGui.QApplication):
-    """
-    """
+class EzSphinxApp(QApplication):
+    """EzSphinx application"""
     
     def __init__(self, argv):
-        QtGui.QApplication.__init__(self, argv)
-        self.connect(self, QtCore.SIGNAL('aboutToQuit()'), self._quit)
+        QApplication.__init__(self, argv)
+        self.connect(self, SIGNAL('aboutToQuit()'), self._quit)
 
     def run(self):
-        self._model = ESphinxModel()
-        self._view = ESphinxView()
-        self._model.add_view(self._view)
-        self._view.show()
+        self._controller = EzSphinxController(self)
+        self._controller.run()
         return self.exec_()
+    
+    def controller(self):
+        return self._controller
         
     def _quit(self):
-        self._model.quit()
-        
+        self._controller.quit()
+
 
 def main():
     app = EzSphinxApp(sys.argv)
