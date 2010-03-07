@@ -120,10 +120,10 @@ class EzSphinxController(QObject):
                 self._warnreport.add(node.attributes['level'],
                                      node.attributes['line'],
                                      description)
-                self._lock.acquire()
-                self._html_docs.append(html)
-                self._lock.release()
-                self.emit(SIGNAL('_do_update()'))
+            self._lock.acquire()
+            self._html_docs.append(html)
+            self._lock.release()
+            self.emit(SIGNAL('_do_update()'))
 
     #-------------------------------------------------------------------------
     # Signal handlers (slots)
