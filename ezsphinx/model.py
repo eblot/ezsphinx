@@ -2,7 +2,7 @@ import codecs
 import os
 import util
 from PyQt4.QtCore import QAbstractTableModel, QDir, Qt, QVariant
-from PyQt4.QtGui import QDirModel, QFileDialog
+from PyQt4.QtGui import QApplication, QDirModel, QFileDialog
 
 
 class WarningReportModel(QAbstractTableModel):
@@ -74,6 +74,8 @@ class EzSphinxRestModel(object):
         self._text = ''
         self._dirty = False
         self._filepath = ''
+        self._last_len = 0
+        self._controller = QApplication.instance().controller()
 
     def validate(self):
         """ Prompt the user if there are warnings/errors with reST file.
@@ -93,6 +95,7 @@ class EzSphinxRestModel(object):
     def load(self, filename):
         """Load reST from a file"""
         fh = codecs.open(filename, 'r', 'utf-8')
+        self._last_len = -1 # be sure to force a reload
         self.text = fh.read()
         fh.close()
         self._filepath = filename
@@ -116,8 +119,17 @@ class EzSphinxRestModel(object):
     
     def _gettext(self):
         return self._text
+        
     def _settext(self, text):
-        self._dirty = True
+        # Ok, so textChanged is stupid, as it gets signalled when *text*
+        # is not changed but formatting is. So we need to discriminate from
+        # both kind of calls...
         self._text = text
+        if len(text) != self._last_len:
+            self._dirty = True
+            self._last_len = len(text)
+            # tell the controller the text has been updated
+            self._controller.update_rest(text)
+
     text = property(_gettext, _settext)
 

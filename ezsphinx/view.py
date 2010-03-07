@@ -45,9 +45,7 @@ class EzSphinxTextEdit(QPlainTextEdit):
         shortcut = QShortcut(QKeySequence("Ctrl+T"), self)
         self._doc = QApplication.instance().controller().rest
         self.connect(shortcut, SIGNAL('activated()'), self._choose_font)
-        
-        self._last_text_len = 0 # should be moved into the document
-        self._last_warnings = {} # should be moved into the document
+        self._last_warnings = {} # should be moved to the document
 
     def select_line(self, line):
         """Move the edit cursor to the selected line"""
@@ -99,14 +97,7 @@ class EzSphinxTextEdit(QPlainTextEdit):
 
     def _textedit_update(self):
         """^: something in the textedit widget has been updated"""
-        # Ok, so textChanged is stupid, as it gets signalled when *text*
-        # is not changed but formatting is. So we need to discriminate from
-        # both kind of calls...
-        text = self.toPlainText()
-        print "_textedit_update move to model"
-        if len(text) != self._last_text_len:
-            self._last_text_len = len(text)
-            QApplication.instance().controller().update_rest(text)
+        self._doc.text = self.toPlainText()
     
     def _blockcount_update(self, newcount):
         """^: a new line has been added or an existing line got removed"""
