@@ -16,7 +16,7 @@ class EzSphinxMenuBar(QMenuBar):
     def __init__(self, parent):
         QMenuBar.__init__(self, parent)
         # TBD: manage the size
-        self.setGeometry(QRect(0, 0, 929, 22))
+        # self.setGeometry(QRect(0, 0, 929, 22))
         self.setObjectName("menubar")
         self.setNativeMenuBar(True)
         # file_menu = self.addMenu(self.tr("&File"));
@@ -42,7 +42,6 @@ class EzSphinxWindow(QMainWindow):
         icon = QIcon(pngpath)
         self.setWindowIcon(icon)
         QApplication.instance().setWindowIcon(icon)
-        self.resize(929, 668)
         QMetaObject.connectSlotsByName(self)
         self.config = EasyConfigParser()
         self._setup_ui()
@@ -137,16 +136,20 @@ class EzSphinxWindow(QMainWindow):
         """reload previously saved UI configuration from a file"""
         if not self.config.read(os.path.expanduser('~/.ezsphinxrc')):
             return
+        self.resize(int(self.config.get('window', 'width', '750')),
+                    int(self.config.get('window', 'height', '650')))
         config = {}
         for section in self.config.sections():
             for k, v in self.config.items(section):
-                config.setdefault(section, []).append((k.lower(), v)) 
+                config.setdefault(section, []).append((k.lower(), v))
         for widget in self.widgets.values():
             if hasattr(widget, 'load_presentation'):
                 widget.load_presentation(config)
 
     def _save_preferences(self, config={}):
         """save current UI configuration into a configuration file"""
+        size = self.size()
+        config['window'] = [('width', size.width()), ('height', size.height())]
         for section in config:
             for key, value in config[section]:
                 self.config.set(section, key, value)
