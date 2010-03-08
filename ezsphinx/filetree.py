@@ -15,7 +15,7 @@ class EzSphinxTreeView(QTreeView):
         font.setPointSize(10)
         self.setFont(font)
         self.setHeaderHidden(True)
-        self.setModel(QApplication.instance().controller().filetree)
+        self.setModel(QApplication.instance().filetree)
         for col in xrange(1, self.model().columnCount()):
             self.setColumnHidden(col, True)
         self.setRootIndex(self.model().index(os.path.expanduser('~')))

@@ -20,7 +20,7 @@ class EzSphinxWarnReportView(QTableView):
         header.setStretchLastSection(True)
         self.setSelectionMode(QAbstractItemView.SingleSelection)
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.setModel(QApplication.instance().controller().warnreport)
+        self.setModel(QApplication.instance().warnreport)
 
     def currentChanged(self, current, previous):
         row = current.row()

@@ -21,11 +21,8 @@ import util
 from threading import Lock
 from multiprocessing import Pool
 from PyQt4.QtCore import QObject, pyqtSignal
+from PyQt4.QtGui import QApplication
 
-from textedit import EzSphinxRestModel
-from warnreport import EzSphinxWarnReportModel
-from filetree import EzSphinxFileTreeModel
-from main import EzSphinxWindow
 
 def docutils_rest_to_html(rest):
     return util.docutils_rest_to_html(rest)
@@ -53,25 +50,6 @@ class EzSphinxController(QObject):
         self._html_docs = []
         self.postUpdate.connect(self._do_update)
 
-    @property
-    def warnreport(self):
-        return self._warnreport
-    
-    @property
-    def filetree(self):
-        return self._filetree
-
-    @property
-    def rest(self):
-        return self._rest
-    
-    def run(self):
-        self._rest = EzSphinxRestModel()
-        self._warnreport = EzSphinxWarnReportModel()
-        self._filetree = EzSphinxFileTreeModel()
-        self._window = EzSphinxWindow()
-        self._window.show()
-
     def quit(self):
         # terminate the pool's subprocess on our own, so that we can catch
         # any termination exception and discard it
@@ -82,8 +60,8 @@ class EzSphinxController(QObject):
         self._pool.join()
 
     def load_file(self, path):
-        if self._rest.replace(path):
-            self._window.update_rest()
+        if QApplication.instance().rest.replace(path):
+            QApplication.instance().mainwin.update_rest()
         
     def update_rest(self, rest):
         self._rstsrc = rest
@@ -113,16 +91,16 @@ class EzSphinxController(QObject):
         else:
             self._processing = False
             html, warning_nodes = result[0].decode('utf-8'), result[1]
-            self._warnreport.reset()
+            QApplication.instance().warnreport.reset()
             for node in warning_nodes:
                 try:
                     description = node.children[0].children[0] #.data
                 except AttributeError, e:
                     print "Attribute Error: %s" % str(e)
                     continue
-                self._warnreport.add(node.attributes['level'],
-                                     node.attributes['line'],
-                                     description)
+                QApplication.instance().warnreport.add(node.attributes['level'],
+                                                       node.attributes['line'],
+                                                       description)
             self._lock.acquire()
             self._html_docs.append(html)
             self._lock.release()
@@ -137,4 +115,4 @@ class EzSphinxController(QObject):
         self._lock.acquire()
         html = self._html_docs.pop(0)
         self._lock.release()
-        self._window.render(html)
+        QApplication.instance().mainwin.render(html)

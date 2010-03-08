@@ -1,3 +1,4 @@
+from PyQt4.QtCore import Qt
 from PyQt4.QtGui import QApplication, QColor, QFileDialog, QFont, \
                         QFontDialog, QKeySequence, QPlainTextEdit, QShortcut, \
                         QTextBlockFormat, QTextCursor
@@ -16,7 +17,13 @@ class EzSphinxTextEdit(QPlainTextEdit):
         self.blockCountChanged.connect(self._blockcount_update)
         shortcut = QShortcut(QKeySequence("Ctrl+T"), self)
         shortcut.activated.connect(self._choose_font)
-        self._doc = QApplication.instance().controller().rest
+        shortcut = QShortcut(QKeySequence.ZoomIn, self)
+        shortcut.activated.connect(self._zoom_in)
+        shortcut.setContext(Qt.WidgetShortcut)
+        shortcut = QShortcut(QKeySequence.ZoomOut, self)
+        shortcut.activated.connect(self._zoom_out)
+        shortcut.setContext(Qt.WidgetShortcut)
+        self._doc = QApplication.instance().rest
         self._last_warnings = {} # should be moved to the document
 
     def select_line(self, line):
@@ -79,9 +86,27 @@ class EzSphinxTextEdit(QPlainTextEdit):
     # Private implementation
     #-------------------------------------------------------------------------
 
+    def _zoom_in(self):
+        font = self.font()
+        pointsize = font.pointSize()
+        if pointsize < 25:
+            pointsize += 1
+            font.setPointSize(pointsize)
+            self.setFont(font)
+            self._save_preferences()
+
+    def _zoom_out(self):
+        font = self.font()
+        pointsize = font.pointSize()
+        if pointsize > 5:
+            pointsize -= 1
+            font.setPointSize(pointsize)
+            self.setFont(font)
+            self._save_preferences()
+
     def _update_background(self):
         """update the background color of all lines that contain errors"""
-        lines = QApplication.instance().controller().warnreport.get_lines()
+        lines = QApplication.instance().warnreport.get_lines()
         warnings = self.differentiate(self._last_warnings, lines) 
         self._last_warnings = lines
         for line in sorted(warnings):
@@ -128,8 +153,11 @@ class EzSphinxTextEdit(QPlainTextEdit):
         (font, ok) = QFontDialog.getFont(font)
         if ok:
             self.setFont(font)
-            config = {'textedit' : [('font', font.toString())]}
-            self.mainwin.save_presentation(config)
+            self._save_preferences()
+    
+    def _save_preferences(self):
+        config = {'textedit' : [('font', self.font().toString())]}
+        self.mainwin.save_presentation(config)
 
     def _generate_formats(self):
         """generate background colors for textedit warnings"""

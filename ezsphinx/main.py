@@ -1,6 +1,6 @@
 from PyQt4.QtCore import QMetaObject, QRect, Qt 
 from PyQt4.QtGui import QApplication, QHBoxLayout, QMainWindow, QMenuBar, \
-                        QStatusBar, QVBoxLayout, QWidget
+                        QStatusBar, QVBoxLayout, QWidget, QIcon
 from filetree import EzSphinxTreeView
 from splitter import EzSphinxSplitter
 from textedit import EzSphinxTextEdit
@@ -8,7 +8,7 @@ from util import EasyConfigParser
 from warnreport import EzSphinxWarnReportView
 from web import EzSphinxWebView
 import os
-
+import sys
 
 class EzSphinxMenuBar(QMenuBar):
     """Main menu bar"""
@@ -35,9 +35,14 @@ class EzSphinxWindow(QMainWindow):
     
     def __init__(self):
         QMainWindow.__init__(self)
-        self.setObjectName("EzSphinx")
+        self.setObjectName('EzSphinx')
+        self.setWindowTitle('EzSphinx')
+        pngpath = os.path.join(os.getcwd(), os.path.dirname(sys.argv[0]),
+                               'images', 'ezsphinx.png')
+        icon = QIcon(pngpath)
+        self.setWindowIcon(icon)
+        QApplication.instance().setWindowIcon(icon)
         self.resize(929, 668)
-        self.setWindowTitle("EzSphinx")
         QMetaObject.connectSlotsByName(self)
         self.config = EasyConfigParser()
         self._setup_ui()
