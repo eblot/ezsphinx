@@ -31,7 +31,7 @@ if 'py2app' in sys.argv:
 
 setup (
     name = 'ezSphinx',
-    version = '0.1.3',
+    version = '0.1.4',
     description = 'Interactive editor for Rst and Sphinx documentation tools',
     author = 'Emmanuel Blot',
     author_email = 'emmanuel.blot@free.fr',

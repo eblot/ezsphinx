@@ -2,7 +2,7 @@
 
 from PyQt4.QtGui import QApplication
 from controller import EzSphinxController
-from textedit import EzSphinxRestModel
+from restedit import EzSphinxRestModel
 from warnreport import EzSphinxWarnReportModel
 from filetree import EzSphinxFileTreeModel
 from main import EzSphinxWindow

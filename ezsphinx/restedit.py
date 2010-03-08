@@ -5,15 +5,15 @@ from PyQt4.QtGui import QApplication, QColor, QFileDialog, QFont, \
 import codecs
 
 
-class EzSphinxTextEdit(QPlainTextEdit):
+class EzSphinxRestEdit(QPlainTextEdit):
     """Source window for Restructured Text"""
     
     def __init__(self, parent, mainwin):
         QPlainTextEdit.__init__(self, parent)
         self.mainwin = mainwin
-        self.setObjectName("textedit")
+        self.setObjectName("restedit")
         self._formats = {}
-        self.textChanged.connect(self._textedit_update)
+        self.textChanged.connect(self._restedit_update)
         self.blockCountChanged.connect(self._blockcount_update)
         shortcut = QShortcut(QKeySequence("Ctrl+T"), self)
         shortcut.activated.connect(self._choose_font)
@@ -34,7 +34,7 @@ class EzSphinxTextEdit(QPlainTextEdit):
         self.setTextCursor(cursor)
     
     def set_focus(self):
-        """set the focus back to the textedit to resume editing"""
+        """set the focus back to the restedit to resume editing"""
         self.activateWindow()
         self.setFocus()
 
@@ -48,8 +48,8 @@ class EzSphinxTextEdit(QPlainTextEdit):
         self.setPlainText(self._doc.text)
 
     def load_presentation(self, config):
-        if 'textedit' in config:
-            for key, value in config['textedit']:
+        if 'restedit' in config:
+            for key, value in config['restedit']:
                 if key == 'font':
                     qtfont = QFont()
                     if qtfont.fromString(value):
@@ -74,8 +74,8 @@ class EzSphinxTextEdit(QPlainTextEdit):
     # Signal handlers (slots)
     #-------------------------------------------------------------------------
 
-    def _textedit_update(self):
-        """^: something in the textedit widget has been updated"""
+    def _restedit_update(self):
+        """^: something in the restedit widget has been updated"""
         self._doc.text = self.toPlainText()
     
     def _blockcount_update(self, newcount):
@@ -148,7 +148,7 @@ class EzSphinxTextEdit(QPlainTextEdit):
         return move
 
     def _choose_font(self):
-        """^: user requested the font dialog for the textedit window"""
+        """^: user requested the font dialog for the restedit window"""
         font = self.font()
         (font, ok) = QFontDialog.getFont(font)
         if ok:
@@ -156,11 +156,11 @@ class EzSphinxTextEdit(QPlainTextEdit):
             self._save_preferences()
     
     def _save_preferences(self):
-        config = {'textedit' : [('font', self.font().toString())]}
+        config = {'restedit' : [('font', self.font().toString())]}
         self.mainwin.save_presentation(config)
 
     def _generate_formats(self):
-        """generate background colors for textedit warnings"""
+        """generate background colors for restedit warnings"""
         if self._formats:
             return
         format = self.document().findBlock(0).blockFormat()
@@ -183,6 +183,14 @@ class EzSphinxRestModel(object):
         self._filepath = ''
         self._last_len = 0
         self._controller = QApplication.instance().controller()
+    
+    @property
+    def dirty(self):
+        return self._dirty
+    
+    @property
+    def filename(self):
+        return self._filepath
 
     def validate(self):
         """ Prompt the user if there are warnings/errors with reST file.
@@ -193,12 +201,6 @@ class EzSphinxRestModel(object):
         else:
             return (True, '')
 
-    def replace(self, filename):
-        if self._dirty:
-            if not self.save():
-                print "Not saved, cancelling load"
-        return self.load(filename)
-            
     def load(self, filename):
         """Load reST from a file"""
         fh = codecs.open(filename, 'r', 'utf-8')
@@ -209,8 +211,10 @@ class EzSphinxRestModel(object):
         self._dirty = False
         return True
 
-    def save(self):
+    def save(self, filename=None):
         """ Save reST to a file"""
+        if filename:
+            self._filepath = filename
         if not self._filepath:
             path = QFileDialog.getSaveFileName(filter='ReST (*.rst)')
             if not path:
@@ -234,7 +238,7 @@ class EzSphinxRestModel(object):
             self._dirty = True
             self._last_len = len(text)
             # tell the controller the text has been updated
-            self._controller.update_rest(text)
+            self._controller.set_rest(text)
 
     text = property(_gettext, _settext)
 

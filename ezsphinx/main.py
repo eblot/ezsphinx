@@ -3,7 +3,7 @@ from PyQt4.QtGui import QApplication, QHBoxLayout, QMainWindow, QMenuBar, \
                         QStatusBar, QVBoxLayout, QWidget, QIcon
 from filetree import EzSphinxTreeView
 from splitter import EzSphinxSplitter
-from textedit import EzSphinxTextEdit
+from restedit import EzSphinxRestEdit
 from util import EasyConfigParser
 from warnreport import EzSphinxWarnReportView
 from web import EzSphinxWebView
@@ -37,11 +37,12 @@ class EzSphinxWindow(QMainWindow):
         QMainWindow.__init__(self)
         self.setObjectName('EzSphinx')
         self.setWindowTitle('EzSphinx')
+        # TODO: Use setuptools resources here
         pngpath = os.path.join(os.getcwd(), os.path.dirname(sys.argv[0]),
                                'images', 'ezsphinx.png')
-        icon = QIcon(pngpath)
-        self.setWindowIcon(icon)
-        QApplication.instance().setWindowIcon(icon)
+        self._icon = QIcon(pngpath)
+        self.setWindowIcon(self._icon)
+        QApplication.instance().setWindowIcon(self._icon)
         QMetaObject.connectSlotsByName(self)
         self.config = EasyConfigParser()
         self._setup_ui()
@@ -52,16 +53,20 @@ class EzSphinxWindow(QMainWindow):
         self._save_preferences(config)
     
     def select_warning(self, line):
-        self.widgets['textedit'].select_line(line)
-        self.widgets['textedit'].set_focus()
+        self.widgets['restedit'].select_line(line)
+        self.widgets['restedit'].set_focus()
 
     def render(self, html=''):
         self.widgets['webview'].refresh(html) # a document would be better
         self.widgets['warnreport'].refresh()
-        self.widgets['textedit'].refresh()
+        self.widgets['restedit'].refresh()
     
-    def update_rest(self):
-        self.widgets['textedit'].update_text()
+    def update(self, what):
+        for w in what:
+            if w in self.widgets:
+                self.widgets[w].update_text()
+            else:
+                print "Invalid widget: %s" % w
 
     #-------------------------------------------------------------------------
     # Private implementation
@@ -101,8 +106,8 @@ class EzSphinxWindow(QMainWindow):
         textlayout = QHBoxLayout(textwidget)
         textlayout.setObjectName("textlayout")
         textlayout.setContentsMargins(0,0,2,0)
-        textedit = EzSphinxTextEdit(textwidget, self)
-        textlayout.addWidget(textedit)
+        restedit = EzSphinxRestEdit(textwidget, self)
+        textlayout.addWidget(restedit)
         webwidget = QWidget(hsplitter)
         webwidget.setObjectName("webwidget")
         weblayout = QHBoxLayout(webwidget)
@@ -123,7 +128,7 @@ class EzSphinxWindow(QMainWindow):
         self.setMenuBar(EzSphinxMenuBar(self))
         self.setStatusBar(EzSphinxStatusBar(self))
         self._add_widgets((hsplitter, vsplitter, fsplitter))
-        self._add_widgets((filetree, textedit, webview, warnreport))
+        self._add_widgets((filetree, restedit, webview, warnreport))
 
     def _add_widgets(self, widgets):
         if not isinstance(widgets, tuple) and not isinstance(widgets, list):

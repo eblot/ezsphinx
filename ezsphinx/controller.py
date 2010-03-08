@@ -20,8 +20,8 @@ import os
 import util
 from threading import Lock
 from multiprocessing import Pool
-from PyQt4.QtCore import QObject, pyqtSignal
-from PyQt4.QtGui import QApplication
+from PyQt4.QtCore import QDir, QObject, pyqtSignal
+from PyQt4.QtGui import QApplication, QMessageBox
 
 
 def docutils_rest_to_html(rest):
@@ -60,10 +60,20 @@ class EzSphinxController(QObject):
         self._pool.join()
 
     def load_file(self, path):
-        if QApplication.instance().rest.replace(path):
-            QApplication.instance().mainwin.update_rest()
-        
-    def update_rest(self, rest):
+        if QApplication.instance().rest.dirty:
+            fn = QDir.convertSeparators(QApplication.instance().rest.filename)
+            rc = QMessageBox.warning(QApplication.instance().mainwin, 
+                    'EzSphinx', 'Save changes to %s before proceeding?' % fn,
+                    QMessageBox.Discard|QMessageBox.Save|QMessageBox.Cancel)
+            if rc == QMessageBox.Cancel:
+                return False
+            if rc == QMessageBox.Save:
+                if not QApplication.instance().rest.save(fn):
+                    return False
+        QApplication.instance().rest.load(path)
+        QApplication.instance().mainwin.update(('restedit', ))
+       
+    def set_rest(self, rest):
         self._rstsrc = rest
         self._queue_html()
     
